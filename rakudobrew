@@ -37,7 +37,10 @@ if ($arg eq 'switch') {
     }
 } elsif ($arg eq 'build') {
     my $impl = shift;
-    if ($impl eq 'jvm') {
+    if ($impl eq 'all') {
+        build_jvm();
+        build_parrot();
+    } elsif ($impl eq 'jvm') {
         build_jvm();
     } elsif ($impl eq 'parrot') {
         build_parrot();
@@ -46,7 +49,10 @@ if ($arg eq 'switch') {
     }
 } elsif ($arg eq 'update') {
     my $impl = shift;
-    if ($impl eq 'jvm') {
+    if ($impl eq 'all') {
+        build_jvm();
+        build_parrot();
+    } elsif ($impl eq 'jvm') {
         build_jvm();
     } elsif ($impl eq 'parrot') {
         build_parrot();
