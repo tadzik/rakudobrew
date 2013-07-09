@@ -39,6 +39,8 @@ if ($arg eq 'switch') {
     my $impl = shift;
     if ($impl eq 'jvm') {
         build_jvm();
+    } elsif ($impl eq 'parrot') {
+        build_parrot();
     } else {
         say "Building $impl is NYI. Well volunteered!"
     }
@@ -46,6 +48,8 @@ if ($arg eq 'switch') {
     my $impl = shift;
     if ($impl eq 'jvm') {
         build_jvm();
+    } elsif ($impl eq 'parrot') {
+        build_parrot();
     } else {
         say "Updating $impl is NYI. Well volunteered!"
     }
@@ -79,4 +83,19 @@ sub build_jvm {
     system "perl ConfigureJVM.pl --with-nqp=$prefix/jvm/nqp/install/nqp";
     system 'make';
     say "Done, jvm built";
+}
+
+sub build_parrot {
+    chdir $prefix;
+    unless (-d 'parrot') {
+        system "git clone git://github.com/rakudo/rakudo.git parrot";
+    }
+    chdir 'parrot';
+    system 'git pull';
+    if (-e 'Makefile') {
+        system 'make realclean';
+    }
+    system 'perl Configure.pl --gen-parrot --gen-nqp';
+    system 'make install';
+    say "Done, parrot built";
 }
