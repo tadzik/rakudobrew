@@ -1,0 +1,3 @@
+#!/bin/sh
+SITE=`perl6 -e 'say "%*CUSTOM_LIB<site>"'`
+$SITE/bin/panda "$@"

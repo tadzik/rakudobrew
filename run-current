@@ -1,0 +1,11 @@
+#!/bin/sh
+
+CURRENT=`cat ~/.rakudobrew/CURRENT`
+
+if [ $CURRENT = 'jvm' ]; then
+    ~/.rakudobrew/run-jvm "$@"
+elif [ $CURRENT = 'parrot' ]; then
+    ~/.rakudobrew/run-parrot "$@"
+else
+    echo "I don't know how to run $CURRENT :("
+fi

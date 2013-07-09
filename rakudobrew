@@ -1,0 +1,82 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use autodie;
+use 5.010;
+
+my $arg = shift // 'help';
+my $home = $ENV{HOME};
+my $prefix = "$home/.rakudobrew";
+
+if ($arg eq 'switch') {
+    my $impl = shift;
+    if ($impl) {
+        if (-d "$prefix/$impl") {
+            say "Switching to $impl";
+            open(my $fh, '>', "$prefix/CURRENT");
+            say $fh $impl;
+            close($fh);
+        } else {
+            say "$impl not installed"
+        }
+    } else {
+        say "Switch to what?";
+        say "Available implementations:";
+        opendir(my $dh, "$home/.rakudobrew");
+        while (readdir $dh) {
+            if (-d "$prefix/$_" and "$_" !~ /^\./) {
+                say $_
+            }
+        }
+    }
+} elsif ($arg eq 'current') {
+    if (-e "$prefix/CURRENT") {
+        print "Currently running ".`cat ~/.rakudobrew/CURRENT`; # yes, I'm that lazy
+    } else {
+        say "Not running anything at the moment. Use '$0 switch' to set an implementation";
+    }
+} elsif ($arg eq 'build') {
+    my $impl = shift;
+    if ($impl eq 'jvm') {
+        build_jvm();
+    } else {
+        say "Building $impl is NYI. Well volunteered!"
+    }
+} elsif ($arg eq 'update') {
+    my $impl = shift;
+    if ($impl eq 'jvm') {
+        build_jvm();
+    } else {
+        say "Updating $impl is NYI. Well volunteered!"
+    }
+} elsif ($arg eq 'help') {
+    say "Usage:";
+    say "$0 current";
+    say "$0 switch [jvm|parrot|moarvm]";
+}
+
+sub build_jvm {
+    chdir $prefix;
+    unless (-d 'jvm') {
+        system "git clone git://github.com/rakudo/rakudo.git jvm";
+    }
+    chdir 'jvm';
+    system 'git pull';
+    unless (-d 'nqp') {
+        system "git clone git://github.com/perl6/nqp.git";
+    }
+    chdir 'nqp';
+    system 'git pull';
+    if (-e 'Makefile') {
+        system 'make clean';
+    }
+    system 'perl ConfigureJVM.pl';
+    system 'make install';
+    chdir '..';
+    if (-e 'Makefile') {
+        system 'make realclean';
+    }
+    system "perl ConfigureJVM.pl --with-nqp=$prefix/jvm/nqp/install/nqp";
+    system 'make';
+    say "Done, jvm built";
+}
