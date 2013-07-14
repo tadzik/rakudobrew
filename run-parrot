@@ -1,2 +1,0 @@
-#!/bin/sh
-~/.rakudobrew/parrot/install/bin/perl6 "$@"

@@ -1,11 +1,12 @@
 #!/bin/sh
 
 CURRENT=`cat ~/.rakudobrew/CURRENT`
+TYPE=`echo $CURRENT | sed -e 's/\-.*$//'`
 
-if [ $CURRENT = 'jvm' ]; then
+if [ $TYPE = 'jvm' ]; then
     ~/.rakudobrew/run-jvm "$@"
-elif [ $CURRENT = 'parrot' ]; then
-    ~/.rakudobrew/run-parrot "$@"
+elif [ $TYPE = 'parrot' ]; then
+    ~/.rakudobrew/$CURRENT/install/bin/perl6 "$@"
 else
     echo "I don't know how to run $CURRENT :("
 fi

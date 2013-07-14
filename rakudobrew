@@ -10,30 +10,14 @@ my $prefix = "$home/.rakudobrew";
 
 if ($arg eq 'switch') {
     my $impl = shift;
-    if ($impl) {
-        if (-d "$prefix/$impl") {
-            say "Switching to $impl";
-            open(my $fh, '>', "$prefix/CURRENT");
-            say $fh $impl;
-            close($fh);
-        } else {
-            say "$impl not installed"
-        }
-    } else {
-        say "Switch to what?";
-        say "Available implementations:";
-        opendir(my $dh, "$home/.rakudobrew");
-        while (readdir $dh) {
-            if (-d "$prefix/$_" and "$_" !~ /^\./) {
-                say $_
-            }
-        }
-    }
+    switch($impl);
+} elsif ($arg eq 'list') {
+    list();
 } elsif ($arg eq 'current') {
     if (-e "$prefix/CURRENT") {
-        print "Currently running ".`cat ~/.rakudobrew/CURRENT`; # yes, I'm that lazy
+        print "Currently running ".slurp("$prefix/CURRENT");
     } else {
-        say "Not running anything at the moment. Use '$0 switch' to set an implementation";
+        say "Not running anything at the moment. Use 'rakudobrew switch' to set an implementation";
     }
 } elsif ($arg eq 'build') {
     my $impl = shift;
@@ -43,26 +27,42 @@ if ($arg eq 'switch') {
     } elsif ($impl eq 'jvm') {
         build_jvm();
     } elsif ($impl eq 'parrot') {
-        build_parrot();
+        my $ver = shift // 'HEAD';
+        build_parrot($ver);
     } else {
         say "Building $impl is NYI. Well volunteered!"
     }
-} elsif ($arg eq 'update') {
-    my $impl = shift;
-    if ($impl eq 'all') {
-        build_jvm();
-        build_parrot();
-    } elsif ($impl eq 'jvm') {
-        build_jvm();
-    } elsif ($impl eq 'parrot') {
-        build_parrot();
-    } else {
-        say "Updating $impl is NYI. Well volunteered!"
-    }
-} elsif ($arg eq 'help') {
+} else {
     say "Usage:";
-    say "$0 current";
-    say "$0 switch [jvm|parrot|moarvm]";
+    say "rakudobrew current";
+    say "rakudobrew list";
+    say "rakudobrew build parrot-2013.06";
+    say "rakudobrew switch [jvm|parrot|moarvm]";
+}
+
+sub list {
+    opendir(my $dh, "$home/.rakudobrew");
+    while (readdir $dh) {
+        if (-d "$prefix/$_" and "$_" !~ /^\./) {
+            say $_
+        }
+    }
+}
+
+sub switch {
+    my $impl = shift;
+    if ($impl) {
+        if (-d "$prefix/$impl") {
+            say "Switching to $impl";
+            spurt("$prefix/CURRENT", $impl);
+        } else {
+            say "$impl not installed"
+        }
+    } else {
+        say "Switch to what?";
+        say "Available implementations:";
+        list();
+    }
 }
 
 sub build_jvm {
@@ -92,16 +92,34 @@ sub build_jvm {
 }
 
 sub build_parrot {
+    my $ver = shift;
     chdir $prefix;
-    unless (-d 'parrot') {
-        system "git clone git://github.com/rakudo/rakudo.git parrot";
+    unless (-d "parrot-$ver") {
+        system "git clone git://github.com/rakudo/rakudo.git parrot-$ver";
     }
-    chdir 'parrot';
+    chdir "parrot-$ver";
     system 'git pull';
+    system "git checkout $ver";
     if (-e 'Makefile') {
         system 'make realclean';
     }
     system 'perl Configure.pl --gen-parrot --gen-nqp';
     system 'make install';
-    say "Done, parrot built";
+    say "Done, parrot-$ver built";
+}
+
+sub slurp {
+    my $file = shift;
+    open(my $fh, '<', $file);
+    local $/ = '';
+    my $ret = <$fh>;
+    close($fh);
+    return $ret;
+}
+
+sub spurt {
+    my ($file, $cont) = @_;
+    open(my $fh, '>', $file);
+    say $fh $cont;
+    close($fh);
 }
