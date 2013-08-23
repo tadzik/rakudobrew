@@ -1,3 +1,2 @@
 #!/bin/sh
-cd ~/.rakudobrew/jvm
-./perl6 "$@"
+~/.rakudobrew/jvm/install-jvm/bin/perl6 "$@"

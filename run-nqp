@@ -1,2 +1,2 @@
 #!/bin/sh
-~/.rakudobrew/parrot/nqp/nqp "$@"
+~/.rakudobrew/parrot-HEAD/nqp/nqp "$@"

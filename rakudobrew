@@ -27,7 +27,7 @@ if ($arg eq 'switch') {
     } elsif ($impl eq 'jvm') {
         build_jvm();
     } elsif ($impl eq 'parrot') {
-        my $ver = shift // 'HEAD';
+        my $ver = shift;
         build_parrot($ver);
     } else {
         say "Building $impl is NYI. Well volunteered!"
@@ -66,33 +66,23 @@ sub switch {
 }
 
 sub build_jvm {
+    my $ver = shift // 'HEAD';
     chdir $prefix;
     unless (-d 'jvm') {
         system "git clone git://github.com/rakudo/rakudo.git jvm";
     }
     chdir 'jvm';
     system 'git pull';
-    unless (-d 'nqp') {
-        system "git clone git://github.com/perl6/nqp.git";
-    }
-    chdir 'nqp';
-    system 'git pull';
-    if (-e 'Makefile') {
-        system 'make clean';
-    }
-    system 'perl ConfigureJVM.pl';
-    system 'make install';
-    chdir '..';
     if (-e 'Makefile') {
         system 'make realclean';
     }
-    system "perl ConfigureJVM.pl --with-nqp=$prefix/jvm/nqp/install/nqp";
-    system 'make';
+    system "perl ConfigureJVM.pl --gen-nqp";
+    system 'make install';
     say "Done, jvm built";
 }
 
 sub build_parrot {
-    my $ver = shift;
+    my $ver = shift // 'HEAD';
     chdir $prefix;
     unless (-d "parrot-$ver") {
         system "git clone git://github.com/rakudo/rakudo.git parrot-$ver";
