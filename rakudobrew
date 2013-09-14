@@ -8,6 +8,15 @@ my $arg = shift // 'help';
 my $home = $ENV{HOME};
 my $prefix = "$home/.rakudobrew";
 
+my %impls = (
+    parrot => {
+        configure => 'perl Configure.pl --gen-parrot --gen-nqp'
+    },
+    jvm => {
+        configure => 'perl ConfigureJVM.pl --gen-nqp'
+    },
+);
+
 if ($arg eq 'switch') {
     my $impl = shift;
     switch($impl);
@@ -22,14 +31,11 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'build') {
     my ($impl, $ver) = (shift, shift);
     if ($impl eq 'all') {
-        build_jvm($ver);
-        build_parrot($ver);
-    } elsif ($impl eq 'jvm') {
-        build_jvm($ver);
-    } elsif ($impl eq 'parrot') {
-        build_parrot($ver);
+        for (qw(parrot jvm)) {
+            build_impl($_, $ver);
+        }
     } else {
-        say "Building $impl is NYI. Well volunteered!"
+        build_impl($impl, $ver);
     }
 } else {
     say "Usage:";
@@ -60,38 +66,26 @@ sub switch {
     }
 }
 
-sub build_jvm {
-    my $ver = shift // 'HEAD';
-    chdir $prefix;
-    unless (-d "jvm-$ver") {
-        system "git clone git://github.com/rakudo/rakudo.git jvm-$ver";
+sub build_impl {
+    my ($impl, $ver) = @_;
+    unless (exists $impls{$impl}) {
+        say "Building $impl is NYI. Well volunteered!";
+        return;
     }
-    chdir "jvm-$ver";
+    $ver //= 'HEAD';
+    chdir $prefix;
+    unless (-d "$impl-$ver") {
+        system "git clone git://github.com/rakudo/rakudo.git $impl-$ver";
+    }
+    chdir "$impl-$ver";
     system 'git pull';
     system "git checkout $ver";
     if (-e 'Makefile') {
         system 'make realclean';
     }
-    system "perl ConfigureJVM.pl --gen-nqp";
+    system $impls{$impl}{configure};
     system 'make install';
-    say "Done, jvm-$ver built";
-}
-
-sub build_parrot {
-    my $ver = shift // 'HEAD';
-    chdir $prefix;
-    unless (-d "parrot-$ver") {
-        system "git clone git://github.com/rakudo/rakudo.git parrot-$ver";
-    }
-    chdir "parrot-$ver";
-    system 'git pull';
-    system "git checkout $ver";
-    if (-e 'Makefile') {
-        system 'make realclean';
-    }
-    system 'perl Configure.pl --gen-parrot --gen-nqp';
-    system 'make install';
-    say "Done, parrot-$ver built";
+    say "Done, $impl-$ver built";
 }
 
 sub slurp {
