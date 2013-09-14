@@ -37,6 +37,8 @@ if ($arg eq 'switch') {
     } else {
         build_impl($impl, $ver);
     }
+} elsif ($arg eq 'build-panda') {
+    build_panda();
 } else {
     say "Usage:";
     say "rakudobrew current";
@@ -86,6 +88,19 @@ sub build_impl {
     system $impls{$impl}{configure};
     system 'make install';
     say "Done, $impl-$ver built";
+}
+
+sub build_panda {
+    my $impl = slurp("$prefix/CURRENT");
+    chomp $impl;
+    chdir "$prefix/$impl";
+    unless (-d 'panda') {
+        system 'git clone git://github.com/tadzik/panda.git';
+    }
+    chdir 'panda';
+    system 'git pull';
+    system 'perl6 rebootstrap.pl';
+    say "Done, built panda for $impl";
 }
 
 sub slurp {
