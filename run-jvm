@@ -1,2 +1,0 @@
-#!/bin/sh
-~/.rakudobrew/jvm/install-jvm/bin/perl6 "$@"

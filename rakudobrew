@@ -20,14 +20,13 @@ if ($arg eq 'switch') {
         say "Not running anything at the moment. Use 'rakudobrew switch' to set an implementation";
     }
 } elsif ($arg eq 'build') {
-    my $impl = shift;
+    my ($impl, $ver) = (shift, shift);
     if ($impl eq 'all') {
-        build_jvm();
-        build_parrot();
+        build_jvm($ver);
+        build_parrot($ver);
     } elsif ($impl eq 'jvm') {
-        build_jvm();
+        build_jvm($ver);
     } elsif ($impl eq 'parrot') {
-        my $ver = shift;
         build_parrot($ver);
     } else {
         say "Building $impl is NYI. Well volunteered!"
@@ -51,13 +50,9 @@ sub list {
 
 sub switch {
     my $impl = shift;
-    if ($impl) {
-        if (-d "$prefix/$impl") {
-            say "Switching to $impl";
-            spurt("$prefix/CURRENT", $impl);
-        } else {
-            say "$impl not installed"
-        }
+    if ($impl and -d "$prefix/$impl") {
+        say "Switching to $impl";
+        spurt("$prefix/CURRENT", $impl);
     } else {
         say "Switch to what?";
         say "Available implementations:";
@@ -68,17 +63,18 @@ sub switch {
 sub build_jvm {
     my $ver = shift // 'HEAD';
     chdir $prefix;
-    unless (-d 'jvm') {
-        system "git clone git://github.com/rakudo/rakudo.git jvm";
+    unless (-d "jvm-$ver") {
+        system "git clone git://github.com/rakudo/rakudo.git jvm-$ver";
     }
-    chdir 'jvm';
+    chdir "jvm-$ver";
     system 'git pull';
+    system "git checkout $ver";
     if (-e 'Makefile') {
         system 'make realclean';
     }
     system "perl ConfigureJVM.pl --gen-nqp";
     system 'make install';
-    say "Done, jvm built";
+    say "Done, jvm-$ver built";
 }
 
 sub build_parrot {
