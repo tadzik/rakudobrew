@@ -24,7 +24,7 @@ if ($arg eq 'switch') {
     list();
 } elsif ($arg eq 'current') {
     if (-e "$prefix/CURRENT") {
-        print "Currently running ".slurp("$prefix/CURRENT");
+        say "Currently running " . current()
     } else {
         say "Not running anything at the moment. Use 'rakudobrew switch' to set an implementation";
     }
@@ -45,6 +45,12 @@ if ($arg eq 'switch') {
     say "rakudobrew list";
     say "rakudobrew build parrot-2013.06";
     say "rakudobrew switch [jvm|parrot|moarvm]";
+}
+
+sub current {
+    my $cur = slurp("$prefix/CURRENT");
+    chomp $cur;
+    return $cur;
 }
 
 sub list {
@@ -87,12 +93,18 @@ sub build_impl {
     }
     system $impls{$impl}{configure};
     system 'make install';
+    if (-d 'panda') {
+        say "Updating panda as well";
+        my $oldcur = current();
+        switch("$impl-$ver");
+        build_panda();
+        switch($oldcur);
+    }
     say "Done, $impl-$ver built";
 }
 
 sub build_panda {
-    my $impl = slurp("$prefix/CURRENT");
-    chomp $impl;
+    my $impl = current();
     chdir "$prefix/$impl";
     unless (-d 'panda') {
         system 'git clone git://github.com/tadzik/panda.git';
