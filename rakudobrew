@@ -54,10 +54,11 @@ sub current {
 }
 
 sub list {
+    my $cur = current();
     opendir(my $dh, "$home/.rakudobrew");
     while (readdir $dh) {
         if (-d "$prefix/$_" and "$_" !~ /^\./) {
-            say $_
+            say $cur eq $_ ? "* $_" : "  $_";
         }
     }
 }
