@@ -21,7 +21,8 @@ if ($arg eq 'switch') {
     my $impl = shift;
     switch($impl);
 } elsif ($arg eq 'list') {
-    list();
+    my $cur = current();
+    map { say $cur eq $_ ? "* $_" : "  $_" } list();
 } elsif ($arg eq 'current') {
     if (-e "$prefix/CURRENT") {
         say "Currently running " . current()
@@ -54,13 +55,8 @@ sub current {
 }
 
 sub list {
-    my $cur = current();
     opendir(my $dh, "$home/.rakudobrew");
-    while (readdir $dh) {
-        if (-d "$prefix/$_" and "$_" !~ /^\./) {
-            say $cur eq $_ ? "* $_" : "  $_";
-        }
-    }
+    grep {/^[^.]/ && -d "$prefix/$_"} readdir($dh);
 }
 
 sub switch {
@@ -68,12 +64,11 @@ sub switch {
     if (!$impl) {
         say "Switch to what?";
         say "Available implementations:";
-        list();
+        map {say} list();
         return;
     }
     opendir(my $dh, $prefix);
-    my @dirs = grep {/^[^.]/ && -d "$prefix/$_"} readdir($dh);
-    my @match = grep { /$impl/ } @dirs;
+    my @match = grep { /$impl/ } list();
     my $ambiguous;
     ($impl, $ambiguous) = @match;
     if (not $ambiguous) {
