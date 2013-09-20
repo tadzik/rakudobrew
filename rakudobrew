@@ -65,13 +65,23 @@ sub list {
 
 sub switch {
     my $impl = shift;
-    if ($impl and -d "$prefix/$impl") {
-        say "Switching to $impl";
-        spurt("$prefix/CURRENT", $impl);
-    } else {
+    if (!$impl) {
         say "Switch to what?";
         say "Available implementations:";
         list();
+        return;
+    }
+    opendir(my $dh, $prefix);
+    my @dirs = grep {/^[^.]/ && -d "$prefix/$_"} readdir($dh);
+    my @match = grep { /$impl/ } @dirs;
+    my $ambiguous;
+    ($impl, $ambiguous) = @match;
+    if (not $ambiguous) {
+        say "Switching to $impl";
+        spurt("$prefix/CURRENT", $impl);
+    } else {
+        say "Sorry, I'm not sure if you mean:";
+        say $_ for @match;
     }
 }
 
