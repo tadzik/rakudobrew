@@ -161,7 +161,7 @@ sub rehash {
     ';
         my $contents = sprintf $tmpl, $source;
         my ($filename) = $source =~ m{/([^/]+)$};
-        spurt("$destdir/$filename", $contents)
+        spurt("$destdir/$filename", $contents);
         chmod 0755, "$destdir/$filename";
     }
 
