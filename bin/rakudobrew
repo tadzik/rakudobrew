@@ -10,16 +10,19 @@ my $prefix = "$home/.rakudobrew";
 
 my %impls = (
     parrot => {
-        configure => 'perl Configure.pl --gen-parrot --gen-nqp'
+        configure => 'perl Configure.pl --backends=parrot --gen-parrot --gen-nqp'
     },
     jvm => {
-        configure => 'perl ConfigureJVM.pl --gen-nqp'
+        configure => 'perl Configure.pl --backends=jvm --gen-nqp'
     },
 );
 
 if ($arg eq 'switch') {
     my $impl = shift;
     switch($impl);
+    rehash();
+} elsif ($arg eq 'rehash') {
+    rehash();
 } elsif ($arg eq 'list') {
     my $cur = current();
     map { say $cur eq $_ ? "* $_" : "  $_" } list();
@@ -45,6 +48,7 @@ if ($arg eq 'switch') {
     say "rakudobrew current";
     say "rakudobrew list";
     say "rakudobrew build parrot-2013.06";
+    say "rakudobrew rehash";
     say "rakudobrew switch [jvm|parrot|moarvm]";
 }
 
@@ -55,8 +59,8 @@ sub current {
 }
 
 sub list {
-    opendir(my $dh, "$home/.rakudobrew");
-    grep {/^[^.]/ && -d "$prefix/$_"} readdir($dh);
+    opendir(my $dh, $prefix);
+    grep {/^[^.]/ && -d "$prefix/$_" && $_ ne 'bin'} readdir($dh);
 }
 
 sub switch {
@@ -135,4 +139,45 @@ sub spurt {
     open(my $fh, '>', $file);
     say $fh $cont;
     close($fh);
+}
+
+sub rehash {
+    sub dir {
+        my $name = shift;
+        opendir(my $dh, $name);
+        my @ret;
+        while (readdir $dh) {
+            next if $_ =~ /^\./;
+            push @ret, "$name/$_"
+        }
+        closedir $dh;
+        return @ret;
+    }
+
+    sub spurt_shim {
+        my ($source, $destdir) = @_;
+        my $tmpl = '#!/bin/sh
+    %s "$@"
+    ';
+        my $contents = sprintf $tmpl, $source;
+        my ($filename) = $source =~ m{/([^/]+)$};
+        spurt("$destdir/$filename", $contents)
+        chmod 0755, "$destdir/$filename";
+    }
+
+    my $current = current();
+    my ($type) = split '-', $current;
+
+    my @paths = "$prefix/$current/install/bin";
+    if ($type eq 'parrot') {
+        my $parverdir = `$prefix/$current/install/bin/parrot_config versiondir`;
+        chomp $parverdir;
+        push @paths, "$prefix/$current/install/lib/$parverdir/languages/perl6/site/bin";
+    }
+
+    my @bins = map { dir($_) } @paths;
+    # TODO: Remove those that were there before?
+    for (@bins) {
+        spurt_shim $_, "$prefix/bin";
+    }
 }
