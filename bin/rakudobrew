@@ -1,7 +1,6 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use autodie;
 use 5.010;
 
 my $arg = shift // 'help';
@@ -10,12 +9,22 @@ my $prefix = "$home/.rakudobrew";
 
 my %impls = (
     parrot => {
-        configure => 'perl Configure.pl --backends=parrot --gen-parrot --gen-nqp'
+        configure => 'perl Configure.pl --backends=parrot --gen-parrot --gen-nqp',
+        realclean => 'make p-realclean',
     },
     jvm => {
-        configure => 'perl Configure.pl --backends=jvm --gen-nqp'
+        configure => 'perl Configure.pl --backends=jvm --gen-nqp',
+        realclean => 'make j-realclean',
+    },
+    moar => {
+        configure => 'perl Configure.pl --backends=moar --gen-moar --gen-nqp',
+        realclean => 'make realclean',
     },
 );
+
+sub run {
+    system(@_) and die "Failed running ".$_[0]
+}
 
 if ($arg eq 'switch') {
     my $impl = shift;
@@ -35,7 +44,7 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'build') {
     my ($impl, $ver) = (shift, shift);
     if ($impl eq 'all') {
-        for (qw(parrot jvm)) {
+        for (qw(parrot jvm moar)) {
             build_impl($_, $ver);
         }
     } else {
@@ -49,7 +58,7 @@ if ($arg eq 'switch') {
     say "rakudobrew list";
     say "rakudobrew build parrot-2013.06";
     say "rakudobrew rehash";
-    say "rakudobrew switch [jvm|parrot|moarvm]";
+    say "rakudobrew switch [jvm|parrot|moar]";
 }
 
 sub current {
@@ -93,16 +102,16 @@ sub build_impl {
     $ver //= 'HEAD';
     chdir $prefix;
     unless (-d "$impl-$ver") {
-        system "git clone git://github.com/rakudo/rakudo.git $impl-$ver";
+        run "git clone git://github.com/rakudo/rakudo.git $impl-$ver";
     }
     chdir "$impl-$ver";
-    system 'git pull';
-    system "git checkout $ver";
+    run 'git pull';
+    run "git checkout $ver";
     if (-e 'Makefile') {
-        system 'make realclean';
+        run $impls{$impl}{realclean};
     }
-    system $impls{$impl}{configure};
-    system 'make install';
+    run $impls{$impl}{configure};
+    run 'make install';
     if (-d 'panda') {
         say "Updating panda as well";
         my $oldcur = current();
@@ -117,11 +126,11 @@ sub build_panda {
     my $impl = current();
     chdir "$prefix/$impl";
     unless (-d 'panda') {
-        system 'git clone git://github.com/tadzik/panda.git';
+        run 'git clone git://github.com/tadzik/panda.git';
     }
     chdir 'panda';
-    system 'git pull';
-    system 'perl6 rebootstrap.pl';
+    run 'git pull';
+    run 'perl6 rebootstrap.pl';
     say "Done, built panda for $impl";
 }
 
@@ -173,6 +182,8 @@ sub rehash {
         my $parverdir = `$prefix/$current/install/bin/parrot_config versiondir`;
         chomp $parverdir;
         push @paths, "$prefix/$current/install/lib/$parverdir/languages/perl6/site/bin";
+    } elsif ($type eq 'jvm') {
+        push @paths, "$prefix/$current/install/languages/perl6/site/bin";
     }
 
     my @bins = map { dir($_) } @paths;
