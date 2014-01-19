@@ -151,6 +151,7 @@ sub spurt {
 }
 
 sub rehash {
+    say "Updating shims";
     sub dir {
         my $name = shift;
         opendir(my $dh, $name);
