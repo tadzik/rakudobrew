@@ -81,15 +81,16 @@ sub switch {
     }
     opendir(my $dh, $prefix);
     my @match = grep { /$impl/ } list();
-    my $ambiguous;
-    ($impl, $ambiguous) = @match;
-    if (not $ambiguous) {
-        say "Switching to $impl";
-        spurt("$prefix/CURRENT", $impl);
+    my ($matched, $ambiguous) = @match;
+    if ($matched and not $ambiguous) {
+        say "Switching to $matched";
+        spurt("$prefix/CURRENT", $matched);
         rehash();
-    } else {
+    } elsif (@match) {
         say "Sorry, I'm not sure if you mean:";
         say $_ for @match;
+    } else {
+        say "Sorry, I have no idea what '$impl' is";
     }
 }
 
