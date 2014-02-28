@@ -13,11 +13,11 @@ my %impls = (
         realclean => 'make realclean',
     },
     jvm => {
-        configure => 'perl Configure.pl --backends=jvm --gen-nqp',
-        realclean => 'make j-realclean',
+        configure => 'perl Configure.pl --backends=jvm --gen-nqp=master',
+        realclean => 'make realclean',
     },
     moar => {
-        configure => 'perl Configure.pl --backends=moar --gen-moar --gen-nqp',
+        configure => 'perl Configure.pl --backends=moar --gen-moar=master --gen-nqp=master',
         realclean => 'make realclean',
     },
 );
@@ -185,6 +185,8 @@ sub rehash {
         chomp $parverdir;
         push @paths, "$prefix/$current/install/lib/$parverdir/languages/perl6/site/bin";
     } elsif ($type eq 'jvm') {
+        push @paths, "$prefix/$current/install/languages/perl6/site/bin";
+    } elsif ($type eq 'moar') {
         push @paths, "$prefix/$current/install/languages/perl6/site/bin";
     }
 
