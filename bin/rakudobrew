@@ -10,15 +10,15 @@ my $prefix = "$home/.rakudobrew";
 my %impls = (
     parrot => {
         configure => 'perl Configure.pl --backends=parrot --gen-parrot --gen-nqp',
-        realclean => 'make realclean',
     },
     jvm => {
         configure => 'perl Configure.pl --backends=jvm --gen-nqp=master',
-        realclean => 'make realclean',
     },
     moar => {
         configure => 'perl Configure.pl --backends=moar --gen-moar=master --gen-nqp=master',
-        realclean => 'make realclean',
+    },
+    moar_spesh => {
+        configure => 'perl Configure.pl --backends=moar --gen-moar=spesh --gen-nqp=master',
     },
 );
 
@@ -109,7 +109,7 @@ sub build_impl {
     run 'git pull';
     run "git checkout $ver";
     if (-e 'Makefile') {
-        run $impls{$impl}{realclean};
+        run 'make realclean';
     }
     run $impls{$impl}{configure};
     run 'make install';
