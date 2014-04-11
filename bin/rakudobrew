@@ -35,8 +35,8 @@ if ($arg eq 'switch') {
     my $cur = current();
     map { say $cur eq $_ ? "* $_" : "  $_" } list();
 } elsif ($arg eq 'current') {
-    if (-e "$prefix/CURRENT") {
-        say "Currently running " . current()
+    if (my $c = current()) {
+        say "Currently running $c"
     } else {
         say "Not running anything at the moment. Use 'rakudobrew switch' to set an implementation";
     }
@@ -61,9 +61,11 @@ if ($arg eq 'switch') {
 }
 
 sub current {
-    my $cur = slurp("$prefix/CURRENT");
-    chomp $cur;
-    return $cur;
+    if (-e "$prefix/CURRENT") {
+        my $cur = slurp("$prefix/CURRENT");
+        chomp $cur;
+        return $cur;
+    }
 }
 
 sub list {
@@ -119,6 +121,9 @@ sub build_impl {
         switch("$impl-$ver");
         build_panda();
         switch($oldcur);
+    }
+    unless (current()) {
+        switch("$impl-$ver");
     }
     say "Done, $impl-$ver built";
 }
