@@ -55,7 +55,7 @@ if ($arg eq 'switch') {
     say "Usage:";
     say "rakudobrew current";
     say "rakudobrew list";
-    say "rakudobrew build parrot-2013.06";
+    say "rakudobrew build [jvm|parrot|moar]";
     say "rakudobrew rehash";
     say "rakudobrew switch [jvm|parrot|moar]";
 }
