@@ -15,10 +15,7 @@ my %impls = (
         configure => 'perl Configure.pl --backends=jvm --gen-nqp=master',
     },
     moar => {
-        configure => 'perl Configure.pl --backends=moar --gen-moar=master --gen-nqp=master',
-    },
-    moar_spesh => {
-        configure => 'perl Configure.pl --backends=moar --gen-moar=spesh --gen-nqp=master',
+        configure => 'perl Configure.pl --backends=moar --gen-moar',
     },
 );
 
