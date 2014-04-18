@@ -29,7 +29,7 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'rehash') {
     rehash();
 } elsif ($arg eq 'list') {
-    my $cur = current();
+    my $cur = current() || '';
     map { say $cur eq $_ ? "* $_" : "  $_" } list();
 } elsif ($arg eq 'current') {
     if (my $c = current()) {
