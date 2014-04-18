@@ -154,10 +154,9 @@ sub spurt {
 }
 
 sub rehash {
-    say "Updating shims";
     sub dir {
         my $name = shift;
-        opendir(my $dh, $name);
+        opendir(my $dh, $name) or return;
         my @ret;
         while (readdir $dh) {
             next if $_ =~ /^\./;
@@ -178,7 +177,7 @@ sub rehash {
         chmod 0755, "$destdir/$filename";
     }
 
-    my $current = current();
+    my $current = current() or return;
     my ($type) = split '-', $current;
 
     my @paths = "$prefix/$current/install/bin";
@@ -192,6 +191,7 @@ sub rehash {
         push @paths, "$prefix/$current/install/languages/perl6/site/bin";
     }
 
+    say "Updating shims";
     my @bins = map { dir($_) } @paths;
     # TODO: Remove those that were there before?
     for (@bins) {
