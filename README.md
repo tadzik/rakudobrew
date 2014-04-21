@@ -5,18 +5,25 @@ It's quick and dirty, may be broken on your system. Please report any breakages.
 Installing rakudobrew
 ---------------------
 
-Install to ~/.rakudobrew
-Add ~/.rakudobrew/bin to $PATH
+```
+$ git clone https://github.com/tadzik/rakudobrew ~/.rakudobrew
+$ export PATH=~/.rakudobrew/bin:$PATH
+```
 
 Bootstrapping a Perl 6 implementation
 -------------------------------------
 
-E.g.
+Run something like:
 
-rakudobrew build moar
+```
+$ rakudobrew build moar
+```
 
-Profit
-------
+to build the latest [Rakudo](https://github.com/rakudo/rakudo)
+(in this case, on the [MoarVM](https://github.com/MoarVM/MoarVM) backend),
+which should then be available as `perl6`. Then, to get the
+[Panda module management tool](https://github.com/tadzik/panda), do:
 
-perl6
-
+```
+$ rakudobrew build-panda
+```
