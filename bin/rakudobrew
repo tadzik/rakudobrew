@@ -48,6 +48,7 @@ if ($arg eq 'switch') {
     }
 } elsif ($arg eq 'build-panda') {
     build_panda();
+    rehash();
 } else {
     say "Usage:";
     say "rakudobrew current";
