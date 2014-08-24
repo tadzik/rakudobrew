@@ -113,7 +113,13 @@ sub build_impl {
         run 'make realclean';
     }
     run $impls{$impl}{configure};
-    run 'make install';
+    if (system 'make install') {
+        if ($^O eq "darwin") {
+            run 'make install'; # try again because OS X make is stupid
+        } else {
+            die "Failed running make install";
+        }
+    }
     if (-d 'panda') {
         say "Updating panda as well";
         my $oldcur = current();
