@@ -17,6 +17,9 @@ my %impls = (
     moar => {
         configure => 'perl Configure.pl --backends=moar --gen-moar',
     },
+    moar_jit => {
+        configure => 'perl Configure.pl --backends=moar --gen-moar=master --moar-option=--enable-jit --gen-nqp=master',
+    },
 );
 
 sub run {
@@ -53,10 +56,10 @@ if ($arg eq 'switch') {
     say "Usage:";
     say "rakudobrew current";
     say "rakudobrew list";
-    say "rakudobrew build [jvm|parrot|moar]";
+    say "rakudobrew build [jvm|parrot|moar|moar_jit]";
     say "rakudobrew build-panda";
     say "rakudobrew rehash";
-    say "rakudobrew switch [jvm|parrot|moar]";
+    say "rakudobrew switch [jvm|parrot|moar|moar_jit]";
 }
 
 sub current {
@@ -196,6 +199,8 @@ sub rehash {
     } elsif ($type eq 'jvm') {
         push @paths, "$prefix/$current/install/languages/perl6/site/bin";
     } elsif ($type eq 'moar') {
+        push @paths, "$prefix/$current/install/languages/perl6/site/bin";
+    } elsif ($type eq 'moar_jit') {
         push @paths, "$prefix/$current/install/languages/perl6/site/bin";
     }
 
