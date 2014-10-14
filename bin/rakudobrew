@@ -169,9 +169,9 @@ sub rehash {
         my $name = shift;
         opendir(my $dh, $name) or return;
         my @ret;
-        while (readdir $dh) {
-            next if $_ =~ /^\./;
-            push @ret, "$name/$_"
+        while (my $entry = readdir $dh) {
+            next if $entry =~ /^\./;
+            push @ret, "$name/$entry"
         }
         closedir $dh;
         return @ret;
