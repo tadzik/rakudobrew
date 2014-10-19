@@ -18,7 +18,7 @@ my %impls = (
         configure => 'perl Configure.pl --backends=moar --gen-moar',
     },
     moar_jit => {
-        configure => 'perl Configure.pl --backends=moar --gen-moar=master --moar-option=--enable-jit --gen-nqp=master',
+        configure => 'perl Configure.pl --backends=moar --gen-moar=master --gen-nqp=master',
     },
 );
 
