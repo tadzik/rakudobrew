@@ -100,6 +100,10 @@ sub switch {
 
 sub build_impl {
     my ($impl, $ver) = @_;
+    if ($impl eq "panda") {
+        build_panda();
+        return;
+    }
     unless (exists $impls{$impl}) {
         say "Building $impl is NYI. Well volunteered!";
         return;
