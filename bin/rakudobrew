@@ -49,6 +49,9 @@ if ($arg eq 'switch') {
     } else {
         build_impl($impl, $ver);
     }
+} elsif ($arg eq 'triple') {
+    my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
+    build_triple($rakudo_ver, $nqp_ver, $moar_ver);
 } elsif ($arg eq 'build-panda') {
     build_panda();
     rehash();
@@ -138,6 +141,65 @@ sub build_impl {
         switch("$impl-$ver");
     }
     say "Done, $impl-$ver built";
+}
+
+sub build_triple {
+    my ($rakudo_ver, $nqp_ver, $moar_ver) = @_;
+    my $impl = "moar";
+    $rakudo_ver //= 'HEAD';
+    chdir $prefix;
+    my $name = "$impl-$rakudo_ver-$nqp_ver-$moar_ver";
+    unless (-d $name) {
+        run "git clone git://github.com/rakudo/rakudo.git $name";
+    }
+    chdir $name;
+    run 'git pull';
+    run "git checkout $rakudo_ver";
+    if (-e 'Makefile') {
+        run 'make realclean';
+    }
+    
+    unless (-d "nqp") {
+        run "git clone git://github.com/perl6/nqp.git";
+    }
+    chdir "nqp";
+    run 'git pull';
+    run "git checkout $nqp_ver";
+
+    unless (-d "MoarVM") {
+        run "git clone git://github.com/MoarVM/MoarVM.git";
+    }
+    chdir "MoarVM";
+    run 'git pull';
+    run "git checkout $moar_ver";
+    run "perl Configure.pl";
+    run "make install";
+    
+    chdir "..";
+    run "perl Configure.pl --backend=moar --prefix=MoarVM/install";
+    run "make install";
+    
+    chdir "..";
+    run "perl Configure.pl --backend=moar --prefix=nqp/MoarVM/install";
+    
+    if (system 'make install') {
+        if ($^O eq "darwin") {
+            run 'make install'; # try again because OS X make is stupid
+        } else {
+            die "Failed running make install";
+        }
+    }
+    if (-d 'panda') {
+        say "Updating panda as well";
+        my $oldcur = current();
+        switch($name);
+        build_panda();
+        switch($oldcur);
+    }
+    unless (current()) {
+        switch($name);
+    }
+    say "Done, $name built";
 }
 
 sub build_panda {
