@@ -172,15 +172,15 @@ sub build_triple {
     chdir "MoarVM";
     run 'git pull';
     run "git checkout $moar_ver";
-    run "perl Configure.pl";
+    run "perl Configure.pl --prefix=../../install";
     run "make install";
     
     chdir "..";
-    run "perl Configure.pl --backend=moar --prefix=MoarVM/install";
+    run "perl Configure.pl --backend=moar --prefix=../install";
     run "make install";
     
     chdir "..";
-    run "perl Configure.pl --backend=moar --prefix=nqp/MoarVM/install";
+    run "perl Configure.pl --backend=moar";
     
     if (system 'make install') {
         if ($^O eq "darwin") {
