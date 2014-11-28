@@ -7,6 +7,8 @@ use FindBin qw($Bin);
 my $arg = shift // 'help';
 my $prefix = "$Bin/..";
 
+my $GIT = $ENV{GIT_BINARY} // 'git';
+
 my %impls = (
     parrot => {
         configure => 'perl Configure.pl --backends=parrot --gen-parrot --gen-nqp',
@@ -111,11 +113,11 @@ sub build_impl {
     $ver //= 'HEAD';
     chdir $prefix;
     unless (-d "$impl-$ver") {
-        run "git clone git://github.com/rakudo/rakudo.git $impl-$ver";
+        run "$GIT clone git://github.com/rakudo/rakudo.git $impl-$ver";
     }
     chdir "$impl-$ver";
-    run 'git pull';
-    run "git checkout $ver";
+    run "$GIT pull";
+    run "$GIT checkout $ver";
     if (-e 'Makefile') {
         run 'make realclean';
     }
@@ -147,28 +149,28 @@ sub build_triple {
     chdir $prefix;
     my $name = "$impl-$rakudo_ver-$nqp_ver-$moar_ver";
     unless (-d $name) {
-        run "git clone git://github.com/rakudo/rakudo.git $name";
+        run "$GIT clone git://github.com/rakudo/rakudo.git $name";
     }
     chdir $name;
-    run 'git pull';
-    run "git checkout $rakudo_ver";
+    run "$GIT pull";
+    run "$GIT checkout $rakudo_ver";
     if (-e 'Makefile') {
         run 'make realclean';
     }
     
     unless (-d "nqp") {
-        run "git clone git://github.com/perl6/nqp.git";
+        run "$GIT clone git://github.com/perl6/nqp.git";
     }
     chdir "nqp";
-    run 'git pull';
-    run "git checkout $nqp_ver";
+    run "$GIT pull";
+    run "$GIT checkout $nqp_ver";
 
     unless (-d "MoarVM") {
-        run "git clone git://github.com/MoarVM/MoarVM.git";
+        run "$GIT clone git://github.com/MoarVM/MoarVM.git";
     }
     chdir "MoarVM";
-    run 'git pull';
-    run "git checkout $moar_ver";
+    run "$GIT pull";
+    run "$GIT checkout $moar_ver";
     run "perl Configure.pl --prefix=../../install";
     run "make install";
     
@@ -203,11 +205,11 @@ sub build_panda {
     my $impl = current();
     chdir "$prefix/$impl";
     unless (-d 'panda') {
-        run 'git clone git://github.com/tadzik/panda.git';
+        run "$GIT clone git://github.com/tadzik/panda.git";
     }
     chdir 'panda';
-    run 'git pull';
-    run 'perl6 rebootstrap.pl';
+    run "$GIT pull";
+    run "perl6 rebootstrap.pl";
     say "Done, built panda for $impl";
 }
 

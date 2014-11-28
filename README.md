@@ -27,3 +27,12 @@ which should then be available as `perl6`. Then, to get the
 ```
 $ rakudobrew build-panda
 ```
+
+Specifying custom git path
+--------------------------
+
+In case git is not in any standard PATH on your system, you can specify a custom path
+to the git binary using a GIT_BINARY environment variable:
+```
+$ GIT_BINARY="%USERPROFILE%\Local Settings\Application Data\GitHub\PORTAB~1\bin\git.exe" rakudobrew build all
+```
