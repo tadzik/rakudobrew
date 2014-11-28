@@ -2,10 +2,10 @@
 use strict;
 use warnings;
 use 5.010;
+use FindBin qw($Bin);
 
 my $arg = shift // 'help';
-my $home = $ENV{HOME};
-my $prefix = "$home/.rakudobrew";
+my $prefix = "$Bin/..";
 
 my %impls = (
     parrot => {
