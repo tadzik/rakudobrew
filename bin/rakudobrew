@@ -69,6 +69,7 @@ if ($arg eq 'switch') {
     say "rakudobrew available";
     say "rakudobrew build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]";
     say "rakudobrew build-panda";
+    say "rakudobrew triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "rakudobrew rehash";
     say "rakudobrew switch ", (join "|", available_backends());
 }
@@ -209,6 +210,8 @@ sub build_triple {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = @_;
     my $impl = "moar";
     $rakudo_ver //= 'HEAD';
+    $nqp_ver //= 'HEAD';
+    $moar_ver //= 'HEAD';
     chdir $prefix;
     my $name = "$impl-$rakudo_ver-$nqp_ver-$moar_ver";
     unless (-d $name) {
