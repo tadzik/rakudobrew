@@ -112,10 +112,50 @@ sub switch {
 sub available {
     say "Available backends:";
     say for available_backends();
+    say "";
+    say "Available Rakudo versions (top-15):";
+    say for (sort {$b cmp $a} grep /^20[0-9][0-9]/, available_rakudos())[0..14];
 }
 
 sub available_backends {
     map {$_->{name}} sort {$a->{weight} <=> $b->{weight}} values %impls;
+}
+
+# TODO Vulnerable to https://developer.github.com/v3/#rate-limiting due to
+# unauthenticated API calls. Cache locally till X-RateLimit-Reset, maybe?
+sub available_rakudos {
+    eval {
+        require LWP::UserAgent;
+        require LWP::Protocol::https;
+        1;
+    } or do {
+        say "cannot retrieve Rakudo versions because:",
+            " LWP::UserAgent or LWP::Protocol::https didn't load (not installed?)";
+        return;
+    };
+
+    my $ua = LWP::UserAgent->new;
+    $ua->env_proxy;
+    $ua->timeout(10);
+    $ua->agent($ua->agent . " rakudobrew (https://github.com/tadzik/rakudobrew)");
+    $ua->default_header("Accept" => "application/vnd.github.v3+json");
+
+    my @tags;
+
+    my $tries = 10; # dumb way to avoid accidental infinite loop
+    my $tags_uri = "https://api.github.com/repos/rakudo/rakudo/tags?per_page=100";
+    while ($tags_uri && $tries) {
+        $tries--;
+        my $res = $ua->get($tags_uri);
+        unless ($res->is_success) {
+            say "cannot retrieve Rakudo versions because: ", $res->status_line;
+            return;
+        }
+        ($tags_uri) = $res->header("Link") =~ /<(.+?)>;\s*rel="next"/;
+        push @tags, $res->decoded_content =~ /"name":\s*"(.+?)"/g; # YOLO
+    }
+
+    return @tags;
 }
 
 sub build_impl {
