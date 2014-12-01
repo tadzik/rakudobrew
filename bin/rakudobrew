@@ -91,7 +91,7 @@ sub switch {
     my $impl = shift;
     if (!$impl) {
         say "Switch to what?";
-        say "Available implementations:";
+        say "Available builds";
         map {say} list();
         return;
     }
