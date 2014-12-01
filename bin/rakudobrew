@@ -67,7 +67,7 @@ if ($arg eq 'switch') {
     say "rakudobrew current";
     say "rakudobrew list";
     say "rakudobrew available";
-    say "rakudobrew build " , (join "|", available_backends(), "all");
+    say "rakudobrew build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]";
     say "rakudobrew build-panda";
     say "rakudobrew rehash";
     say "rakudobrew switch ", (join "|", available_backends());
