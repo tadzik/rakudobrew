@@ -77,6 +77,8 @@ if ($arg eq 'switch') {
     say "rakudobrew self-upgrade";
 }
 
+exit;
+
 sub current {
     if (-e "$prefix/CURRENT") {
         my $cur = slurp("$prefix/CURRENT");
