@@ -45,6 +45,8 @@ if ($arg eq 'switch') {
     } else {
         say "Not running anything at the moment. Use 'rakudobrew switch' to set an implementation";
     }
+} elsif ($arg eq 'available') {
+    available();
 } elsif ($arg eq 'build') {
     my ($impl, $ver) = (shift, shift);
     if ($impl && $impl eq 'all') {
@@ -64,14 +66,11 @@ if ($arg eq 'switch') {
     say "Usage:";
     say "rakudobrew current";
     say "rakudobrew list";
+    say "rakudobrew available";
     say "rakudobrew build " , (join "|", available_backends(), "all");
     say "rakudobrew build-panda";
     say "rakudobrew rehash";
     say "rakudobrew switch ", (join "|", available_backends());
-}
-
-sub available_backends {
-    map {$_->{name}} sort {$a->{weight} <=> $b->{weight}} values %impls;
 }
 
 sub current {
@@ -110,12 +109,20 @@ sub switch {
     }
 }
 
+sub available {
+    say "Available backends:";
+    say for available_backends();
+}
+
+sub available_backends {
+    map {$_->{name}} sort {$a->{weight} <=> $b->{weight}} values %impls;
+}
+
 sub build_impl {
     my ($impl, $ver) = @_;
     unless (defined $impl) {
         say "Build what?";
-        say "Available backends:";
-        say for available_backends();
+        available();
         return;
     }
     if ($impl eq "panda") {
