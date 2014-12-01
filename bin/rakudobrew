@@ -11,12 +11,18 @@ my $GIT = $ENV{GIT_BINARY} // 'git';
 
 my %impls = (
     parrot => {
+        name      => "parrot",
+        weight    => 10,
         configure => 'perl Configure.pl --backends=parrot --gen-parrot --gen-nqp',
     },
     jvm => {
+        name      => "jvm",
+        weight    => 20,
         configure => 'perl Configure.pl --backends=jvm --gen-nqp=master',
     },
     moar => {
+        name      => "moar",
+        weight    => 30,
         configure => 'perl Configure.pl --backends=moar --gen-moar',
     },
 );
@@ -42,7 +48,7 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'build') {
     my ($impl, $ver) = (shift, shift);
     if ($impl eq 'all') {
-        for (qw(parrot jvm moar)) {
+        for (available_backends()) {
             build_impl($_, $ver);
         }
     } else {
@@ -58,10 +64,14 @@ if ($arg eq 'switch') {
     say "Usage:";
     say "rakudobrew current";
     say "rakudobrew list";
-    say "rakudobrew build [jvm|parrot|moar|all]";
+    say "rakudobrew build " , (join "|", available_backends(), "all");
     say "rakudobrew build-panda";
     say "rakudobrew rehash";
-    say "rakudobrew switch [jvm|parrot|moar]";
+    say "rakudobrew switch ", (join "|", available_backends());
+}
+
+sub available_backends {
+    map {$_->{name}} sort {$a->{weight} <=> $b->{weight}} values %impls;
 }
 
 sub current {
