@@ -47,7 +47,7 @@ if ($arg eq 'switch') {
     }
 } elsif ($arg eq 'build') {
     my ($impl, $ver) = (shift, shift);
-    if ($impl eq 'all') {
+    if ($impl && $impl eq 'all') {
         for (available_backends()) {
             build_impl($_, $ver);
         }
@@ -112,6 +112,12 @@ sub switch {
 
 sub build_impl {
     my ($impl, $ver) = @_;
+    unless (defined $impl) {
+        say "Build what?";
+        say "Available backends:";
+        say for available_backends();
+        return;
+    }
     if ($impl eq "panda") {
         build_panda();
         return;
