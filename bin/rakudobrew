@@ -62,6 +62,8 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'build-panda') {
     build_panda();
     rehash();
+} elsif ($arg eq 'self-upgrade') {
+    self_upgrade();
 } else {
     say "Usage:";
     say "rakudobrew current";
@@ -72,6 +74,7 @@ if ($arg eq 'switch') {
     say "rakudobrew triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "rakudobrew rehash";
     say "rakudobrew switch ", (join "|", available_backends());
+    say "rakudobrew self-upgrade";
 }
 
 sub current {
@@ -341,4 +344,9 @@ sub rehash {
     for (@bins) {
         spurt_shim $_, "$prefix/bin";
     }
+}
+
+sub self_upgrade {
+    chdir $prefix;
+    run "$GIT pull";
 }
