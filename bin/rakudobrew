@@ -8,6 +8,7 @@ my $arg = shift // 'help';
 my $prefix = "$Bin/..";
 
 my $GIT = $ENV{GIT_BINARY} // 'git';
+my $RAKUDO_REPO_URL = 'git://github.com/rakudo/rakudo.git';
 
 my %impls = (
     parrot => {
@@ -78,7 +79,7 @@ sub current {
 }
 
 sub list_available {
-    my @output = qx|$GIT ls-remote --tags git\@github.com:rakudo/rakudo.git|;
+    my @output = qx|$GIT ls-remote --tags $RAKUDO_REPO_URL|;
     my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
     return map(m{tags/([^\^]+)\^}, @tags );
 }
@@ -124,7 +125,7 @@ sub build_impl {
     $ver //= 'HEAD';
     chdir $prefix;
     unless (-d "$impl-$ver") {
-        run "$GIT clone git://github.com/rakudo/rakudo.git $impl-$ver";
+        run "$GIT clone $RAKUDO_REPO_URL $impl-$ver";
     }
     chdir "$impl-$ver";
     run "$GIT pull";
@@ -160,7 +161,7 @@ sub build_triple {
     chdir $prefix;
     my $name = "$impl-$rakudo_ver-$nqp_ver-$moar_ver";
     unless (-d $name) {
-        run "$GIT clone git://github.com/rakudo/rakudo.git $name";
+        run "$GIT clone $RAKUDO_REPO_URL $name";
     }
     chdir $name;
     run "$GIT pull";
