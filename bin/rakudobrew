@@ -19,7 +19,7 @@ my %impls = (
     jvm => {
         name      => "jvm",
         weight    => 20,
-        configure => 'perl Configure.pl --backends=jvm --gen-nqp=master',
+        configure => 'perl Configure.pl --backends=jvm --gen-nqp',
     },
     moar => {
         name      => "moar",
