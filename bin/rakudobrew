@@ -43,7 +43,8 @@ if ($arg eq 'switch') {
     
 } elsif ($arg eq 'list-available') {
     my ($cur_backend, $cur_rakudo) = split '-', (current() || ''), 2;
-
+    $cur_backend |= '';
+    $cur_rakudo |= '';
     say "Available backends:";
     map { say $cur_backend eq $_ ? "* $_" : "  $_" } available_backends();
     say "";
