@@ -8,6 +8,7 @@ my $arg = shift // 'help';
 my $prefix = "$Bin/..";
 
 my $GIT = $ENV{GIT_BINARY} // 'git';
+my $RAKUDO_REPO_URL = 'https://github.com/rakudo/rakudo.git'; #Avoids problems with non-users
 
 my %impls = (
     parrot => {
@@ -39,6 +40,10 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'list') {
     my $cur = current() || '';
     map { say $cur eq $_ ? "* $_" : "  $_" } list();
+    
+} elsif ($arg eq 'list-available') {
+    my $cur = current() || '';
+    map { say $cur eq $_ ? "* $_" : "  $_" } list_available();
 } elsif ($arg eq 'current') {
     if (my $c = current()) {
         say "Currently running $c"
@@ -68,7 +73,7 @@ if ($arg eq 'switch') {
     say "Usage:";
     say "rakudobrew current";
     say "rakudobrew list";
-    say "rakudobrew available";
+    say "rakudobrew list-available";
     say "rakudobrew build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]";
     say "rakudobrew build-panda";
     say "rakudobrew triple [rakudo-ver [nqp-ver [moar-ver]]]";
@@ -85,6 +90,12 @@ sub current {
         chomp $cur;
         return $cur;
     }
+}
+
+sub list_available {
+    my @output = qx|$GIT ls-remote --tags $RAKUDO_REPO_URL|;
+    my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
+    return map(m{tags/([^\^]+)\^}, @tags );
 }
 
 sub list {
@@ -182,7 +193,7 @@ sub build_impl {
     $ver //= 'HEAD';
     chdir $prefix;
     unless (-d "$impl-$ver") {
-        run "$GIT clone git://github.com/rakudo/rakudo.git $impl-$ver";
+        run "$GIT clone $RAKUDO_REPO_URL $impl-$ver";
     }
     chdir "$impl-$ver";
     run "$GIT pull";
@@ -220,7 +231,7 @@ sub build_triple {
     chdir $prefix;
     my $name = "$impl-$rakudo_ver-$nqp_ver-$moar_ver";
     unless (-d $name) {
-        run "$GIT clone git://github.com/rakudo/rakudo.git $name";
+        run "$GIT clone $RAKUDO_REPO_URL $name";
     }
     chdir $name;
     run "$GIT pull";
