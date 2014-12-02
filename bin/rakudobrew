@@ -42,8 +42,13 @@ if ($arg eq 'switch') {
     map { say $cur eq $_ ? "* $_" : "  $_" } list();
     
 } elsif ($arg eq 'list-available') {
-    my $cur = current() || '';
-    map { say $cur eq $_ ? "* $_" : "  $_" } list_available();
+    my ($cur_backend, $cur_rakudo) = split '-', (current() || ''), 2;
+
+    say "Available backends:";
+    map { say $cur_backend eq $_ ? "* $_" : "  $_" } available_backends();
+    say "";
+    say "Available Rakudo versions:";
+    map { say $cur_rakudo eq $_ ? "* $_" : "  $_" } available_rakudos();
 } elsif ($arg eq 'current') {
     if (my $c = current()) {
         say "Currently running $c"
@@ -90,7 +95,7 @@ sub current {
     }
 }
 
-sub list_available {
+sub available_rakudos {
     my @output = qx|$GIT ls-remote --tags $RAKUDO_REPO_URL|;
     my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
     return map(m{tags/([^\^]+)\^}, @tags );
