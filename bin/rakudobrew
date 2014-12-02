@@ -8,7 +8,7 @@ my $arg = shift // 'help';
 my $prefix = "$Bin/..";
 
 my $GIT = $ENV{GIT_BINARY} // 'git';
-my $RAKUDO_REPO_URL = 'https://github.com/rakudo/rakudo.git';
+my $RAKUDO_REPO_URL = 'https://github.com/rakudo/rakudo.git'; #Avoids problems with non-users
 
 my %impls = (
     parrot => {
