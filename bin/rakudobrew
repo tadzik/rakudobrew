@@ -40,7 +40,6 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'list') {
     my $cur = current() || '';
     map { say $cur eq $_ ? "* $_" : "  $_" } list();
-    
 } elsif ($arg eq 'list-available') {
     my ($cur_backend, $cur_rakudo) = split '-', (current() || ''), 2;
     $cur_backend |= '';
@@ -198,7 +197,7 @@ sub build_triple {
     if (-e 'Makefile') {
         run 'make realclean';
     }
-    
+
     unless (-d "nqp") {
         run "$GIT clone git://github.com/perl6/nqp.git";
     }
@@ -214,14 +213,14 @@ sub build_triple {
     run "$GIT checkout $moar_ver";
     run "perl Configure.pl --prefix=../../install";
     run "make install";
-    
+
     chdir "..";
     run "perl Configure.pl --backend=moar --prefix=../install";
     run "make install";
-    
+
     chdir "..";
     run "perl Configure.pl --backend=moar";
-    
+
     if (system 'make install') {
         if ($^O eq "darwin") {
             run 'make install'; # try again because OS X make is stupid
