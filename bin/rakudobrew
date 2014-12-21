@@ -166,7 +166,9 @@ sub build_impl {
     run "$GIT checkout $ver_to_checkout";
 
     if (-e 'Makefile') {
-        run 'make realclean';
+        eval {
+            run 'make realclean';
+        };
     }
     run $impls{$impl}{configure};
     if (system 'make install') {
