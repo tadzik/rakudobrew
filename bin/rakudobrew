@@ -147,7 +147,7 @@ sub build_impl {
         return;
     }
     unless (exists $impls{$impl}) {
-        say "Building $impl is NYI. Well volunteered!";
+        say "Building Rakudo with backend '$impl' is NYI. Well volunteered!";
         return;
     }
     $ver //= 'nom';
