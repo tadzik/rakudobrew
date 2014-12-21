@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use 5.010;
 use FindBin qw($Bin);
+use Carp qw(croak);
 
 my $arg = shift // 'help';
 my $prefix = "$Bin/..";
@@ -29,7 +30,7 @@ my %impls = (
 );
 
 sub run {
-    system(@_) and die "Failed running ".$_[0]
+    system(@_) and croak "Failed running ".$_[0]
 }
 
 if ($arg eq 'switch') {
