@@ -73,6 +73,15 @@ if ($arg eq 'switch') {
     rehash();
 } elsif ($arg eq 'self-upgrade') {
     self_upgrade();
+} elsif ($arg eq 'test') {
+    my $impl = shift;
+    if ($impl && $impl eq 'all') {
+        for (list()) {
+            test($_);
+        }
+    } else {
+        test($impl);
+    }
 } else {
     say "Usage:";
     say "rakudobrew current";
@@ -84,6 +93,7 @@ if ($arg eq 'switch') {
     say "rakudobrew rehash";
     say "rakudobrew switch ", (join "|", available_backends());
     say "rakudobrew self-upgrade";
+    say "rakudobrew test [", (join "|", available_backends(), "all"), "]";
 }
 
 exit;
@@ -321,4 +331,23 @@ sub rehash {
 sub self_upgrade {
     chdir $prefix;
     run "$GIT pull";
+}
+
+sub test {
+    my $impl = shift;
+    if (!$impl) {
+        $impl = current();
+    }
+    my @match = grep { /$impl/ } list();
+    my ($matched, $ambiguous) = @match;
+    if ($matched and not $ambiguous) {
+        say "Spectesting $matched";
+        chdir "$prefix/$matched";
+        run "make spectest";
+    } elsif (@match) {
+        say "Sorry, I'm not sure if you mean:";
+        say $_ for @match;
+    } else {
+        say "Sorry, I have no idea what '$impl' is";
+    }
 }
