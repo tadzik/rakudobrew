@@ -349,5 +349,6 @@ sub test {
         say $_ for @match;
     } else {
         say "Sorry, I have no idea what '$impl' is";
+        say "Have you run 'rakudobrew build $impl' yet?";
     }
 }
