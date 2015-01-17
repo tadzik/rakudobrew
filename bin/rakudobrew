@@ -126,7 +126,7 @@ sub switch {
         return;
     }
     opendir(my $dh, $prefix);
-    my @match = grep { /$impl/ } list();
+    my @match = grep { /\Q$impl/ } list();
     my ($matched, $ambiguous) = @match;
     if ($ambiguous) {
         my ($exact) = grep { $_ eq $impl } @match;
@@ -344,7 +344,7 @@ sub test {
     if (!$impl) {
         $impl = current();
     }
-    my @match = grep { /$impl/ } list();
+    my @match = grep { /\Q$impl/ } list();
     my ($matched, $ambiguous) = @match;
     if ($ambiguous) {
         my ($exact) = grep { $_ eq $impl } @match;
