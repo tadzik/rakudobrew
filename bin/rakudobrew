@@ -128,6 +128,12 @@ sub switch {
     opendir(my $dh, $prefix);
     my @match = grep { /$impl/ } list();
     my ($matched, $ambiguous) = @match;
+    if ($ambiguous) {
+        my ($exact) = grep { $_ eq $impl } @match;
+        if ($exact) {
+            ($matched, $ambiguous) = $exact;
+        }
+    }
     if ($matched and not $ambiguous) {
         say "Switching to $matched";
         spurt("$prefix/CURRENT", $matched);
@@ -340,6 +346,12 @@ sub test {
     }
     my @match = grep { /$impl/ } list();
     my ($matched, $ambiguous) = @match;
+    if ($ambiguous) {
+        my ($exact) = grep { $_ eq $impl } @match;
+        if ($exact) {
+            ($matched, $ambiguous) = $exact;
+        }
+    }
     if ($matched and not $ambiguous) {
         say "Spectesting $matched";
         chdir "$prefix/$matched";
