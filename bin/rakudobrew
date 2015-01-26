@@ -2,10 +2,24 @@
 use strict;
 use warnings;
 use 5.010;
+use Cwd;
 use FindBin qw($Bin);
 
 my $arg = shift // 'help';
 my $prefix = "$Bin/..";
+my $git_reference = "$prefix/git_reference" ;
+
+unless (-d $git_reference) {
+    mkdir $git_reference;
+}
+
+my %git_repos = (
+    rakudo => 'https://github.com/rakudo/rakudo.git',
+    MoarVM => 'git://github.com/MoarVM/MoarVM.git',
+    parrot => 'git://github.com/parrot/parrot.git',
+    nqp    => 'git://github.com/perl6/nqp.git',
+    panda  => 'git://github.com/tadzik/panda.git',
+);
 
 my $GIT = $ENV{GIT_BINARY} // 'git';
 my $RAKUDO_REPO_URL = 'https://github.com/rakudo/rakudo.git'; #Avoids problems with non-users
@@ -14,17 +28,20 @@ my %impls = (
     parrot => {
         name      => "parrot",
         weight    => 10,
-        configure => 'perl Configure.pl --backends=parrot --gen-parrot --gen-nqp',
+        configure => "perl Configure.pl --backends=parrot --gen-parrot --gen-nqp --git-reference=$git_reference",
+        need_repo => ['rakudo', 'nqp', 'parrot'],
     },
     jvm => {
         name      => "jvm",
         weight    => 20,
-        configure => 'perl Configure.pl --backends=jvm --gen-nqp',
+        configure => "perl Configure.pl --backends=jvm --gen-nqp --git-reference=$git_reference",
+        need_repo => ['rakudo', 'nqp'],
     },
     moar => {
         name      => "moar",
         weight    => 30,
-        configure => 'perl Configure.pl --backends=moar --gen-moar',
+        configure => "perl Configure.pl --backends=moar --gen-moar --git-reference=$git_reference",
+        need_repo => ['rakudo', 'nqp', 'MoarVM'],
     },
 );
 
@@ -107,7 +124,7 @@ sub current {
 }
 
 sub available_rakudos {
-    my @output = qx|$GIT ls-remote --tags $RAKUDO_REPO_URL|;
+    my @output = qx|$GIT ls-remote --tags $git_repos{rakudo}|;
     my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
     return map(m{tags/([^\^]+)\^}, @tags );
 }
@@ -168,7 +185,10 @@ sub build_impl {
     $ver //= 'HEAD';
     chdir $prefix;
     unless (-d "$impl-$ver") {
-        run "$GIT clone $RAKUDO_REPO_URL $impl-$ver";
+        for(@{$impls{$impl}{need_repo}}) {
+            update_git_reference($_);
+        }
+        run "$GIT clone --reference $git_reference/rakudo $git_repos{rakudo} $impl-$ver";
     }
     chdir "$impl-$ver";
     run "$GIT pull";
@@ -197,6 +217,19 @@ sub build_impl {
     say "Done, $impl-$ver built";
 }
 
+sub update_git_reference {
+    my $repo = shift;
+    my $back = cwd();
+    print "Update git reference: $repo\n";
+    chdir $git_reference;
+    unless (-d $repo) {
+        run "$GIT clone $git_repos{$repo} $repo";
+    }
+    chdir $repo;
+    run "$GIT pull";
+    chdir $back;
+}
+
 sub build_triple {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = @_;
     my $impl = "moar";
@@ -206,7 +239,8 @@ sub build_triple {
     chdir $prefix;
     my $name = "$impl-$rakudo_ver-$nqp_ver-$moar_ver";
     unless (-d $name) {
-        run "$GIT clone $RAKUDO_REPO_URL $name";
+        update_git_reference('rakudo');
+        run "$GIT clone --reference $git_reference/rakudo $git_repos{rakudo} $name";
     }
     chdir $name;
     run "$GIT pull";
@@ -216,14 +250,16 @@ sub build_triple {
     }
     
     unless (-d "nqp") {
-        run "$GIT clone git://github.com/perl6/nqp.git";
+        update_git_reference('nqp');
+        run "$GIT clone --reference $git_reference/nqp $git_repos{nqp}";
     }
     chdir "nqp";
     run "$GIT pull";
     run "$GIT checkout $nqp_ver";
 
     unless (-d "MoarVM") {
-        run "$GIT clone git://github.com/MoarVM/MoarVM.git";
+        update_git_reference('MoarVM');
+        run "$GIT clone --reference $git_reference/MoarVM $git_repos{MoarVM}";
     }
     chdir "MoarVM";
     run "$GIT pull";
@@ -262,7 +298,7 @@ sub build_panda {
     my $impl = current();
     chdir "$prefix/$impl";
     unless (-d 'panda') {
-        run "$GIT clone git://github.com/tadzik/panda.git";
+        run "$GIT clone $git_repos{panda}";
     }
     chdir 'panda';
     run "$GIT pull";
