@@ -1,4 +1,4 @@
-Put this in ~/.rakudobrew, and add symlinks/aliases for convenience.
+Put this in `~/.rakudobrew`, and add symlinks/aliases for convenience.
 
 It's quick and dirty, may be broken on your system. Please report any breakages.
 
@@ -33,6 +33,14 @@ Specifying custom git path
 
 In case git is not in any standard PATH on your system, you can specify a custom path
 to the git binary using a GIT_BINARY environment variable:
+
 ```
 $ GIT_BINARY="%USERPROFILE%\Local Settings\Application Data\GitHub\PORTAB~1\bin\git.exe" rakudobrew build all
 ```
+
+Command-line switches
+---------------
+
+Run `rakudobrew`
+
+
