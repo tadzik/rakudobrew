@@ -14,7 +14,7 @@ unless (-d $git_reference) {
 }
 
 my %git_repos = (
-    rakudo => 'https://github.com/rakudo/rakudo.git',
+    rakudo => 'git://github.com/rakudo/rakudo.git',
     MoarVM => 'git://github.com/MoarVM/MoarVM.git',
     parrot => 'git://github.com/parrot/parrot.git',
     nqp    => 'git://github.com/perl6/nqp.git',
