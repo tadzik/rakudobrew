@@ -58,7 +58,6 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'list') {
     my $cur = current() || '';
     map { say $cur eq $_ ? "* $_" : "  $_" } list();
-    
 } elsif ($arg eq 'list-available') {
     my ($cur_backend, $cur_rakudo) = split '-', (current() || ''), 2;
     $cur_backend |= '';
@@ -75,13 +74,22 @@ if ($arg eq 'switch') {
         say "Not running anything at the moment. Use 'rakudobrew switch' to set an implementation";
     }
 } elsif ($arg eq 'build') {
-    my ($impl, $ver) = (shift, shift);
+    my $impl = shift;
+    my $ver = shift
+        if $ARGV[0] !~ /^--/;
+    my $configure_opts;
+    if ($ARGV[0] =~ /^--configure-opts=/) {
+        $configure_opts = shift;
+        $configure_opts =~ s/^\-\-configure-opts=//;
+        $configure_opts =~ s/^'//;
+        $configure_opts =~ s/'$//;
+    }
     if ($impl && $impl eq 'all') {
         for (available_backends()) {
-            build_impl($_, $ver);
+            build_impl($_, $ver, $configure_opts);
         }
     } else {
-        build_impl($impl, $ver);
+        build_impl($impl, $ver, $configure_opts);
     }
 } elsif ($arg eq 'triple') {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
@@ -105,7 +113,7 @@ if ($arg eq 'switch') {
     say "rakudobrew current";
     say "rakudobrew list";
     say "rakudobrew list-available";
-    say "rakudobrew build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]";
+    say "rakudobrew build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
     say "rakudobrew build-panda";
     say "rakudobrew triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "rakudobrew rehash";
@@ -169,7 +177,7 @@ sub available_backends {
 }
 
 sub build_impl {
-    my ($impl, $ver) = @_;
+    my ($impl, $ver, $configure_opts) = @_;
     unless (defined $impl) {
         say "Build what?";
         available();
@@ -206,7 +214,7 @@ sub build_impl {
             run 'make realclean';
         };
     }
-    run $impls{$impl}{configure};
+    run $impls{$impl}{configure} . " $configure_opts";
     if (system 'make install') {
         if ($^O eq "darwin") {
             run 'make install'; # try again because OS X make is stupid
@@ -258,7 +266,7 @@ sub build_triple {
     if (-e 'Makefile') {
         run 'make realclean';
     }
-    
+
     unless (-d "nqp") {
         update_git_reference('nqp');
         run "$GIT clone --reference $git_reference/nqp $git_repos{nqp}";
@@ -276,14 +284,14 @@ sub build_triple {
     run "$GIT checkout $moar_ver";
     run "perl Configure.pl --prefix=../../install";
     run "make install";
-    
+
     chdir "..";
     run "perl Configure.pl --backend=moar --prefix=../install";
     run "make install";
-    
+
     chdir "..";
     run "perl Configure.pl --backend=moar";
-    
+
     if (system 'make install') {
         if ($^O eq "darwin") {
             run 'make install'; # try again because OS X make is stupid
