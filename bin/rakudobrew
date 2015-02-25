@@ -76,9 +76,9 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'build') {
     my $impl = shift;
     my $ver = shift
-        if $ARGV[0] !~ /^--/;
+        if @ARGV && $ARGV[0] !~ /^--/;
     my $configure_opts;
-    if ($ARGV[0] =~ /^--configure-opts=/) {
+    if (@ARGV && $ARGV[0] =~ /^--configure-opts=/) {
         $configure_opts = shift;
         $configure_opts =~ s/^\-\-configure-opts=//;
         $configure_opts =~ s/^'//;
@@ -180,7 +180,9 @@ sub build_impl {
     my ($impl, $ver, $configure_opts) = @_;
     unless (defined $impl) {
         say "Build what?";
-        available();
+        my ($cur) = split '-', (current() // ''), 2;
+        $cur //= '';
+        map { say $cur eq $_ ? "* $_" : "  $_" } available_backends();
         return;
     }
     if ($impl eq "panda") {
