@@ -77,7 +77,7 @@ if ($arg eq 'switch') {
     my $impl = shift;
     my $ver = shift
         if @ARGV && $ARGV[0] !~ /^--/;
-    my $configure_opts;
+    my $configure_opts = '';
     if (@ARGV && $ARGV[0] =~ /^--configure-opts=/) {
         $configure_opts = shift;
         $configure_opts =~ s/^\-\-configure-opts=//;
