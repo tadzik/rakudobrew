@@ -353,7 +353,7 @@ sub rehash {
         my ($source, $destdir) = @_;
         my $tmpl = $^O =~ /win32/i 
             ? "\"%s\" %%*"
-            : "#!/bin/sh\n%s \"$@\"";
+            : "#!/bin/sh\n%s \"\$\@\"";
 
         my $contents = sprintf $tmpl, $source;
         my ($filename) = $source =~ m{/([^/]+)$};
