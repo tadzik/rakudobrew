@@ -35,13 +35,13 @@ my %impls = (
     jvm => {
         name      => "jvm",
         weight    => 20,
-        configure => "perl Configure.pl --backends=jvm --gen-nqp --git-reference=$git_reference",
+        configure => "perl Configure.pl --backends=jvm --gen-nqp --git-reference=$git_reference --make-install",
         need_repo => ['rakudo', 'nqp'],
     },
     moar => {
         name      => "moar",
         weight    => 30,
-        configure => "perl Configure.pl --backends=moar --gen-moar --git-reference=$git_reference",
+        configure => "perl Configure.pl --backends=moar --gen-moar --git-reference=$git_reference --make-install",
         need_repo => ['rakudo', 'nqp', 'MoarVM'],
     },
 );
@@ -211,19 +211,13 @@ sub build_impl {
     };
     run "$GIT checkout $ver_to_checkout";
 
-    if (-e 'Makefile') {
-        eval {
-            run 'make realclean';
-        };
-    }
     run $impls{$impl}{configure} . " $configure_opts";
-    if (system 'make install') {
-        if ($^O eq "darwin") {
-            run 'make install'; # try again because OS X make is stupid
-        } else {
-            die "Failed running make install";
-        }
+
+    # not sure if this is still required
+    if ($^O eq "darwin") {
+        run 'make install'; # try again because OS X make is stupid
     }
+
     if (-d 'panda') {
         say "Updating panda as well";
         my $oldcur = current();
@@ -357,9 +351,10 @@ sub rehash {
 
     sub spurt_shim {
         my ($source, $destdir) = @_;
-        my $tmpl = '#!/bin/sh
-    %s "$@"
-    ';
+        my $tmpl = $^O =~ /win32/i 
+            ? "\"%s\" %%*"
+            : "#!/bin/sh\n%s \"$@\"";
+
         my $contents = sprintf $tmpl, $source;
         my ($filename) = $source =~ m{/([^/]+)$};
         spurt("$destdir/$filename", $contents);
