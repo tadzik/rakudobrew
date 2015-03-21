@@ -37,12 +37,11 @@ $ rakudobrew build moar
 ```
 
 
-Upgrading to the latest rakudobrew
-----------------------------------
+Upgrading rakudobrew itself
+---------------------------
 
 ```
-$ cd ~/.rakudobrew
-$ git pull
+$ rakudobrew self-upgrade
 ```
 
 
