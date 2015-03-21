@@ -37,8 +37,8 @@ $ rakudobrew build moar
 ```
 
 
-Upgrading your version of rakudobrew
-------------------------------------
+Upgrading to the latest rakudobrew
+----------------------------------
 
 ```
 $ cd ~/.rakudobrew
