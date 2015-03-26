@@ -369,7 +369,7 @@ sub rehash {
     my $current = current() or return;
     my ($type) = split '-', $current;
 
-    my @paths = "$prefix/$current/install/bin";
+    my @paths = ("$prefix/$current/install/bin", "$prefix/$current/install/share/perl6/site/bin");
     if ($type eq 'parrot') {
         my $parverdir = `$prefix/$current/install/bin/parrot_config versiondir`;
         chomp $parverdir;
