@@ -17,7 +17,6 @@ unless (-d $git_reference) {
 my %git_repos = (
     rakudo => 'git://github.com/rakudo/rakudo.git',
     MoarVM => 'git://github.com/MoarVM/MoarVM.git',
-    parrot => 'git://github.com/parrot/parrot.git',
     nqp    => 'git://github.com/perl6/nqp.git',
     panda  => 'git://github.com/tadzik/panda.git',
 );
@@ -26,12 +25,6 @@ my $GIT = $ENV{GIT_BINARY} // 'git';
 my $RAKUDO_REPO_URL = 'https://github.com/rakudo/rakudo.git'; #Avoids problems with non-users
 
 my %impls = (
-    parrot => {
-        name      => "parrot",
-        weight    => 10,
-        configure => "perl Configure.pl --backends=parrot --gen-parrot --gen-nqp --git-reference=$git_reference",
-        need_repo => ['rakudo', 'nqp', 'parrot'],
-    },
     jvm => {
         name      => "jvm",
         weight    => 20,
@@ -370,15 +363,9 @@ sub rehash {
     my ($type) = split '-', $current;
 
     my @paths = ("$prefix/$current/install/bin", "$prefix/$current/install/share/perl6/site/bin");
-    if ($type eq 'parrot') {
-        my $parverdir = `$prefix/$current/install/bin/parrot_config versiondir`;
-        chomp $parverdir;
-        push @paths, "$prefix/$current/install/lib/$parverdir/languages/perl6/site/bin";
-    } elsif ($type eq 'jvm') {
+    if ($type eq 'jvm') {
         push @paths, "$prefix/$current/install/languages/perl6/site/bin";
     } elsif ($type eq 'moar') {
-        push @paths, "$prefix/$current/install/languages/perl6/site/bin";
-    } elsif ($type eq 'moar_jit') {
         push @paths, "$prefix/$current/install/languages/perl6/site/bin";
     }
 
