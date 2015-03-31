@@ -363,11 +363,6 @@ sub rehash {
     my ($type) = split '-', $current;
 
     my @paths = ("$prefix/$current/install/bin", "$prefix/$current/install/share/perl6/site/bin");
-    if ($type eq 'jvm') {
-        push @paths, "$prefix/$current/install/languages/perl6/site/bin";
-    } elsif ($type eq 'moar') {
-        push @paths, "$prefix/$current/install/languages/perl6/site/bin";
-    }
 
     say "Updating shims";
     my @bins = map { dir($_) } @paths;
