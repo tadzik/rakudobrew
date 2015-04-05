@@ -28,6 +28,30 @@ which should then be available as `perl6`. Then, to get the
 $ rakudobrew build-panda
 ```
 
+
+Upgrading your Perl 6 implementation
+------------------------------------
+
+```
+$ rakudobrew build moar
+```
+
+
+Upgrading rakudobrew itself
+---------------------------
+
+```
+$ rakudobrew self-upgrade
+```
+
+
+Uninstall rakudobrew and its Perl 6(s)
+--------------------------------------
+
+To remove rakudobrew and any Perl 6 implementations it's installed on your system,
+just remove or rename the ~/.rakudobrew directory.
+
+
 Specifying custom git path
 --------------------------
 
