@@ -23,18 +23,19 @@ my %git_repos = (
 
 my $GIT = $ENV{GIT_BINARY} // 'git';
 my $RAKUDO_REPO_URL = 'https://github.com/rakudo/rakudo.git'; #Avoids problems with non-users
+my $PERL5 = $^X;
 
 my %impls = (
     jvm => {
         name      => "jvm",
         weight    => 20,
-        configure => "perl Configure.pl --backends=jvm --gen-nqp --git-reference=$git_reference --make-install",
+        configure => "$PERL5 Configure.pl --backends=jvm --gen-nqp --git-reference=$git_reference --make-install",
         need_repo => ['rakudo', 'nqp'],
     },
     moar => {
         name      => "moar",
         weight    => 30,
-        configure => "perl Configure.pl --backends=moar --gen-moar --git-reference=$git_reference --make-install",
+        configure => "$PERL5 Configure.pl --backends=moar --gen-moar --git-reference=$git_reference --make-install",
         need_repo => ['rakudo', 'nqp', 'MoarVM'],
     },
 );
@@ -271,15 +272,15 @@ sub build_triple {
     chdir "MoarVM";
     run "$GIT pull";
     run "$GIT checkout $moar_ver";
-    run "perl Configure.pl --prefix=../../install";
+    run "$PERL5 Configure.pl --prefix=../../install";
     run "make install";
 
     chdir "..";
-    run "perl Configure.pl --backend=moar --prefix=../install";
-    run "make install";
+    run "$PERL5 Configure.pl --backend=moar --prefix=../install";
+    run "$PERL5 install";
 
     chdir "..";
-    run "perl Configure.pl --backend=moar";
+    run "$PERL5 Configure.pl --backend=moar";
 
     if (system 'make install') {
         if ($^O eq "darwin") {
