@@ -278,11 +278,7 @@ sub build_triple {
     run "$PERL5 Configure.pl --backend=moar";
 
     if (system 'make install') {
-        if ($^O eq "darwin") {
-            run 'make install'; # try again because OS X make is stupid
-        } else {
-            die "Failed running make install";
-        }
+        die "Failed running make install";
     }
     if (-d 'panda') {
         say "Updating panda as well";
