@@ -22,7 +22,6 @@ my %git_repos = (
 );
 
 my $GIT = $ENV{GIT_BINARY} // 'git';
-my $RAKUDO_REPO_URL = 'https://github.com/rakudo/rakudo.git'; #Avoids problems with non-users
 my $PERL5 = $^X;
 
 my %impls = (
