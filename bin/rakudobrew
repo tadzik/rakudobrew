@@ -207,11 +207,6 @@ sub build_impl {
 
     run $impls{$impl}{configure} . " $configure_opts";
 
-    # not sure if this is still required
-    if ($^O eq "darwin") {
-        run 'make install'; # try again because OS X make is stupid
-    }
-
     if (-d 'panda') {
         say "Updating panda as well";
         my $oldcur = current();
