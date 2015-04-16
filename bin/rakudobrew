@@ -4,6 +4,7 @@ use warnings;
 use 5.010;
 use Cwd;
 use FindBin qw($Bin);
+use File::Path qw(remove_tree);
 use Carp qw(croak);
 
 my $arg = shift // 'help';
@@ -46,6 +47,9 @@ sub run {
 if ($arg eq 'switch') {
     my $impl = shift;
     switch($impl);
+} elsif ($arg eq 'nuke') {
+    my $impl = shift;
+    nuke($impl);
 } elsif ($arg eq 'rehash') {
     rehash();
 } elsif ($arg eq 'list') {
@@ -111,6 +115,7 @@ if ($arg eq 'switch') {
     say "rakudobrew triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "rakudobrew rehash";
     say "rakudobrew switch ", (join "|", available_backends());
+    say "rakudobrew nuke ", (join "|", available_backends());
     say "rakudobrew self-upgrade";
     say "rakudobrew test [", (join "|", available_backends(), "all"), "]";
 }
@@ -133,11 +138,31 @@ sub available_rakudos {
 
 sub list {
     opendir(my $dh, $prefix);
-    grep {/^[^.]/ && -d "$prefix/$_" && $_ ne 'bin'} readdir($dh);
+    grep {/^[^.]/ && -d "$prefix/$_"
+          && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'panda'} readdir($dh);
 }
 
 sub switch {
     my $impl = shift;
+    match_and_run($impl, sub {
+        my $matched = shift;
+        say "Switching to $matched";
+        spurt("$prefix/CURRENT", $matched);
+        rehash();
+    })
+}
+
+sub nuke {
+    my $impl = shift;
+    match_and_run($impl, sub {
+        my $matched = shift;
+        say "Nuking $matched";
+        remove_tree("$prefix/$matched");
+    })
+}
+
+sub match_and_run {
+    my ($impl, $action) = @_;
     if (!$impl) {
         say "Switch to what?";
         say "Available builds";
@@ -154,9 +179,7 @@ sub switch {
         }
     }
     if ($matched and not $ambiguous) {
-        say "Switching to $matched";
-        spurt("$prefix/CURRENT", $matched);
-        rehash();
+        $action->($matched);
     } elsif (@match) {
         say "Sorry, I'm not sure if you mean:";
         say $_ for @match;
