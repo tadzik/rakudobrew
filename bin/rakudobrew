@@ -5,6 +5,7 @@ use 5.010;
 use Cwd;
 use FindBin qw($Bin);
 use File::Path qw(remove_tree);
+use File::Basename qw(basename dirname);
 use Carp qw(croak);
 
 my $arg = shift // 'help';
@@ -358,14 +359,19 @@ sub rehash {
 
     sub spurt_shim {
         my ($source, $destdir) = @_;
-        my $tmpl = $^O =~ /win32/i 
-            ? "\"%s\" %%*"
-            : "#!/bin/sh\n%s \"\$\@\"";
+        my $dirname  = dirname $source;
+        my $basename = basename $source;
 
-        my $contents = sprintf $tmpl, $source;
-        my ($filename) = $source =~ m{/([^/]+)$};
-        spurt("$destdir/$filename", $contents);
-        chmod 0755, "$destdir/$filename";
+        my $contents;
+        if ($^O =~ /win32/i) {
+            $contents = sprintf "\"%s\" %%*", $source;
+        } else {
+            my $tmpl = "#!/bin/sh\nPATH=%s:\$PATH %s \"\$\@\"";
+            $contents = sprintf $tmpl, $dirname, $basename;
+        }
+
+        spurt("$destdir/$basename", $contents);
+        chmod 0755, "$destdir/$basename";
     }
 
     my $current = current() or return;
