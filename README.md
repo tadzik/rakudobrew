@@ -49,14 +49,14 @@ Uninstall rakudobrew and its Perl 6(s)
 --------------------------------------
 
 To remove rakudobrew and any Perl 6 implementations it's installed on your system,
-just remove or rename the ~/.rakudobrew directory.
+just remove or rename the `~/.rakudobrew` directory.
 
 
 Specifying custom git path
 --------------------------
 
-In case git is not in any standard PATH on your system, you can specify a custom path
-to the git binary using a GIT_BINARY environment variable:
+In case git is not in any standard `PATH` on your system, you can specify a custom path
+to the git binary using a `GIT_BINARY` environment variable:
 
 ```
 $ GIT_BINARY="%USERPROFILE%\Local Settings\Application Data\GitHub\PORTAB~1\bin\git.exe" rakudobrew build all
