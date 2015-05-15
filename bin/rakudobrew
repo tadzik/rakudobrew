@@ -295,7 +295,7 @@ sub build_triple {
 
     chdir "..";
     run "$PERL5 Configure.pl --backend=moar --prefix=../install";
-    run "$PERL5 install";
+    run "make install";
 
     chdir "..";
     run "$PERL5 Configure.pl --backend=moar";
