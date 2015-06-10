@@ -93,7 +93,8 @@ if ($arg eq 'switch') {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
     build_triple($rakudo_ver, $nqp_ver, $moar_ver);
 } elsif ($arg eq 'build-panda') {
-    build_panda();
+    my $panda_ver = shift;
+    build_panda($panda_ver);
     rehash();
 } elsif ($arg eq 'self-upgrade') {
     self_upgrade();
@@ -112,7 +113,7 @@ if ($arg eq 'switch') {
     say "rakudobrew list";
     say "rakudobrew list-available";
     say "rakudobrew build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
-    say "rakudobrew build-panda";
+    say "rakudobrew build-panda [panda-ver]";
     say "rakudobrew triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "rakudobrew rehash";
     say "rakudobrew switch ", (join "|", available_backends());
@@ -317,6 +318,8 @@ sub build_triple {
 }
 
 sub build_panda {
+    my ($panda_ver) = @_;
+    $panda_ver //= 'HEAD';
     my $impl = current();
     chdir "$prefix/$impl";
     unless (-d 'panda') {
@@ -324,6 +327,7 @@ sub build_panda {
     }
     chdir 'panda';
     run "$GIT pull";
+    run "$GIT checkout $panda_ver";
     run "perl6 rebootstrap.pl";
     say "Done, built panda for $impl";
 }
