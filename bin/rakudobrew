@@ -91,7 +91,14 @@ if ($arg eq 'switch') {
     }
 } elsif ($arg eq 'triple') {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
-    build_triple($rakudo_ver, $nqp_ver, $moar_ver);
+    my $configure_opts = '';
+    if (@ARGV && $ARGV[0] =~ /^--configure-opts=/) {
+        $configure_opts = shift;
+        $configure_opts =~ s/^\-\-configure-opts=//;
+        $configure_opts =~ s/^'//;
+        $configure_opts =~ s/'$//;
+    }
+    build_triple($rakudo_ver, $nqp_ver, $moar_ver, $configure_opts);
 } elsif ($arg eq 'build-panda') {
     my $panda_ver = shift;
     build_panda($panda_ver);
@@ -114,7 +121,7 @@ if ($arg eq 'switch') {
     say "rakudobrew list-available";
     say "rakudobrew build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
     say "rakudobrew build-panda [panda-ver]";
-    say "rakudobrew triple [rakudo-ver [nqp-ver [moar-ver]]]";
+    say "rakudobrew triple [rakudo-ver [nqp-ver [moar-ver]]] [--configure-opts=]";
     say "rakudobrew rehash";
     say "rakudobrew switch ", (join "|", available_backends());
     say "rakudobrew nuke ", (join "|", available_backends());
@@ -258,11 +265,59 @@ sub update_git_reference {
 }
 
 sub build_triple {
-    my ($rakudo_ver, $nqp_ver, $moar_ver) = @_;
+    my ($rakudo_ver, $nqp_ver, $moar_ver, $configure_opts) = @_;
     my $impl = "moar";
     $rakudo_ver //= 'HEAD';
     $nqp_ver //= 'HEAD';
     $moar_ver //= 'HEAD';
+    my $rakudo_opts = my $nqp_opts = my $moar_opts = "";
+    unless ($configure_opts =~ /--prefix=/) {
+        $nqp_opts .= " --prefix=../install";
+        $moar_opts .= " --prefix=../../install";
+    }
+    my @configure_opts = split(/(?:^|\s+)\-\-/, $configure_opts);
+
+    # Try to send the right options to the right Configure.pl.
+    # May need an update from time to time.  Note we do not
+    # need to validate the options just route them, and we
+    # do not support sending different values to the same option.
+    # Also we don't pass on options that interfere with the triplet.
+    for my $mopt (qw(debug optimize instrument os shell toolchain
+                     compiler ar cc ld make has-sha has-libuv
+                     static has-libtommath has-libatomic_ops
+                     has-dyncall build host big-endian jit
+                     enable-jit lua has-dynasm prefix bindir libdir
+                     mastdir make-install asan)) {
+        for my $copt (@configure_opts) {
+            next unless $copt =~ /\S+/;
+            $moar_opts .= " --" . $copt
+                if $copt =~ m/^$mopt$/
+                or $copt =~ m/^$mopt\=/
+                or $copt =~ m/^no-$mopt$/
+                or $copt =~ m/^no$mopt$/
+        }
+    }
+    for my $nopt (qw(prefix no-clean makefile-timing)) {
+        for my $copt (@configure_opts) {
+            next unless $copt =~ /\S+/;
+            $nqp_opts .= " --" . $copt
+                if $copt =~ m/^$nopt$/
+                or $copt =~ m/^$nopt\=/
+                or $copt =~ m/^no-$nopt$/
+                or $copt =~ m/^no$nopt$/
+        }
+    }
+    for my $ropt (qw(prefix no-clean makefile-timing)) {
+        for my $copt (@configure_opts) {
+            next unless $copt =~ /\S+/;
+            $rakudo_opts .= " --" . $copt
+                if $copt =~ m/^$ropt$/
+                or $copt =~ m/^$ropt\=/
+                or $copt =~ m/^no-$ropt$/
+                or $copt =~ m/^no$ropt$/
+        }
+    }
+
     chdir $prefix;
     my $name = "$impl-$rakudo_ver-$nqp_ver-$moar_ver";
     unless (-d $name) {
@@ -291,15 +346,15 @@ sub build_triple {
     chdir "MoarVM";
     run "$GIT pull";
     run "$GIT checkout $moar_ver";
-    run "$PERL5 Configure.pl --prefix=../../install";
+    run "$PERL5 Configure.pl $moar_opts";
     run "make install";
 
     chdir "..";
-    run "$PERL5 Configure.pl --backend=moar --prefix=../install";
+    run "$PERL5 Configure.pl --backend=moar $nqp_opts";
     run "make install";
 
     chdir "..";
-    run "$PERL5 Configure.pl --backend=moar";
+    run "$PERL5 Configure.pl --backend=moar $rakudo_opts";
 
     if (system 'make install') {
         die "Failed running make install";
