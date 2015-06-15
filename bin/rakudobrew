@@ -90,13 +90,17 @@ if ($arg eq 'switch') {
         build_impl($impl, $ver, $configure_opts);
     }
 } elsif ($arg eq 'triple') {
-    my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
+    my ($rakudo_ver) = shift;
+    my ($nqp_ver, $moar_ver);
+    $nqp_ver = shift if ($ARGV[0] !~ m/^\-\-/);
+    $moar_ver = shift if ($ARGV[0] !~ m/^\-\-/);
+
     my $configure_opts = '';
-    if (@ARGV && $ARGV[0] =~ /^--configure-opts=/) {
+    if (@ARGV && $ARGV[0] =~ /^\-\-configure\-opts\=/) {
         $configure_opts = shift;
-        $configure_opts =~ s/^\-\-configure-opts=//;
-        $configure_opts =~ s/^'//;
-        $configure_opts =~ s/'$//;
+        $configure_opts =~ s/^\-\-configure\-opts\=//;
+        $configure_opts =~ s/^\'//;
+        $configure_opts =~ s/\'$//;
     }
     build_triple($rakudo_ver, $nqp_ver, $moar_ver, $configure_opts);
 } elsif ($arg eq 'build-panda') {
