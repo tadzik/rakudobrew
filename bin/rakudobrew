@@ -370,7 +370,7 @@ sub rehash {
         if ($^O =~ /win32/i) {
             $contents = sprintf "\"%s\" %%*", $source;
         } else {
-            my $tmpl = "#!/bin/sh\nPATH=%s:\$PATH %s \"\$\@\"";
+            my $tmpl = "#!/bin/sh\nexport PATH=%s:\$PATH\nexec %s \"\$\@\"";
             $contents = sprintf $tmpl, $dirname, $basename;
         }
 
