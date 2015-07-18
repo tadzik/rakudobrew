@@ -16,15 +16,16 @@ unless (-d $git_reference) {
     mkdir $git_reference;
 }
 
-my %git_repos = (
-    rakudo => 'git://github.com/rakudo/rakudo.git',
-    MoarVM => 'git://github.com/MoarVM/MoarVM.git',
-    nqp    => 'git://github.com/perl6/nqp.git',
-    panda  => 'git://github.com/tadzik/panda.git',
-);
+my $GIT       = $ENV{GIT_BINARY} // 'git';
+my $GIT_PROTO = $ENV{GIT_PROTOCOL} // 'git';
+my $PERL5     = $^X;
 
-my $GIT = $ENV{GIT_BINARY} // 'git';
-my $PERL5 = $^X;
+my %git_repos = (
+    rakudo => "$GIT_PROTO://github.com/rakudo/rakudo.git",
+    MoarVM => "$GIT_PROTO://github.com/MoarVM/MoarVM.git",
+    nqp    => "$GIT_PROTO://github.com/perl6/nqp.git",
+    panda  => "$GIT_PROTO://github.com/tadzik/panda.git",
+);
 
 my %impls = (
     jvm => {
