@@ -6,8 +6,8 @@ Installing rakudobrew
 ---------------------
 
 ```
-$ git clone https://github.com/tadzik/rakudobrew ~/.rakudobrew
-$ export PATH=~/.rakudobrew/bin:$PATH
+git clone https://github.com/tadzik/rakudobrew ~/.rakudobrew
+export PATH=~/.rakudobrew/bin:$PATH
 ```
 
 Bootstrapping a Perl 6 implementation
