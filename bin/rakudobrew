@@ -40,6 +40,12 @@ my %impls = (
         configure => "$PERL5 Configure.pl --backends=moar --gen-moar --git-reference=$git_reference --make-install",
         need_repo => ['rakudo', 'nqp', 'MoarVM'],
     },
+    glr => {
+        name      => "glr",
+        weight    => 30,
+        configure => "git checkout glr; $PERL5 Configure.pl --backends=moar --gen-moar --git-reference=$git_reference --make-install",
+        need_repo => ['rakudo', 'nqp', 'MoarVM'],
+    },
 );
 
 sub run {
