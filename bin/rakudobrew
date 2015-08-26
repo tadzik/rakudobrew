@@ -333,8 +333,8 @@ sub build_panda {
         run "$GIT clone $git_repos{panda}";
     }
     chdir 'panda';
-    run "$GIT pull";
-    run "$GIT checkout $panda_ver";
+    run "$GIT pull -q";
+    run "$GIT checkout -q $panda_ver";
     run "perl6 rebootstrap.pl";
     say "Done, built panda for $impl";
 }
