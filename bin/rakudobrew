@@ -62,7 +62,7 @@ if ($arg eq 'switch') {
     rehash();
 } elsif ($arg eq 'list') {
     my $cur = current() || '';
-    map { say $cur eq $_ ? "* $_" : "  $_" } list();
+    map { say $cur eq $_ ? "* $_" : "  $_" } sort { $a cmp $b } list();
 } elsif ($arg eq 'list-available') {
     my ($cur_backend, $cur_rakudo) = split '-', (current() || ''), 2;
     $cur_backend |= '';
