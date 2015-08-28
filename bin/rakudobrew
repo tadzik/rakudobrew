@@ -391,8 +391,19 @@ sub rehash {
     my @paths = ("$prefix/$current/install/bin", "$prefix/$current/install/share/perl6/site/bin");
 
     say "Updating shims";
+
+    { # Remove the existing shims.
+        opendir(my $dh, "$prefix/bin");
+        while (my $entry = readdir $dh) {
+            next if $entry =~ /^\./;
+            next if $entry =~ /rakudobrew/;
+            unlink "$prefix/bin/$entry";
+        }
+        closedir $dh;
+    }
+
     my @bins = map { dir($_) } @paths;
-    # TODO: Remove those that were there before?
+
     for (@bins) {
         spurt_shim $_, "$prefix/bin";
     }
