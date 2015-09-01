@@ -6,7 +6,11 @@ use Cwd;
 use FindBin qw($Bin);
 use File::Path qw(remove_tree);
 use File::Basename qw(basename dirname);
+use File::Spec::Functions qw(catfile splitpath);
 use Carp qw(croak);
+
+my $brew_name = 'rakudobrew';
+$brew_name .= '.pl' if ($^O =~ /win32/i);
 
 my $arg = shift // 'help';
 my $prefix = "$Bin/..";
@@ -50,6 +54,16 @@ my %impls = (
 
 sub run {
     system(@_) and croak "Failed running ".$_[0]
+}
+
+{ # Check whether we are called as a shim and forward if yes.
+    my (undef, undef, $exec_name) = splitpath($0);
+
+    # TODO: Mac is also case insensitive. Is this way to compensate for insensitivity safe?
+    if ($exec_name ne $brew_name &&
+    ($^O !~ /win32/i || lc $exec_name ne lc $brew_name)) {
+        do_exec($exec_name, \@ARGV);
+    }
 }
 
 if ($arg eq 'switch') {
@@ -438,4 +452,58 @@ sub test {
         say "Sorry, I have no idea what '$impl' is";
         say "Have you run 'rakudobrew build $impl' yet?";
     }
+}
+
+sub do_exec {
+    my ($program, $args) = @_;
+
+    # Check for currently set version.
+    # Check for shell version by looking for $PL6ENV_VERSION the environment.
+    # TODO
+    
+    # Check for local version by looking for a `.perl6-version` file in the current and parent folders.
+    # TODO
+
+    # Check for global version by looking at `$prefix/CURRENT` (`$prefix/version`)
+    my $version = current();
+    
+    # Determine the executable file.
+    my $target; {
+        my @paths = (
+            catfile($prefix, $version, 'install', 'bin', $program),
+            catfile($prefix, $version, 'install', 'share', 'perl6', 'site', 'bin', $program),
+        );
+        if ($^O =~ /win32/i) {
+            # On Windows we have to add a .pl suffix (if not already there) to program filenames
+            # to make them work without having to call perl explicitly. Thus we strip that prefix
+            # when searching for the target.
+            my $prog_no_suffix = $program;
+            if ($prog_no_suffix =~ s/\.pl$//) {
+                push @paths, (
+                    catfile($prefix, $version, 'install', 'bin', $prog_no_suffix),
+                    catfile($prefix, $version, 'install', 'share', 'perl6', 'site', 'bin', $prog_no_suffix)
+                )
+            }
+        }
+        for my $path (@paths) {
+            if (-e $path) {
+                $target = $path;
+                last;
+            }
+        }
+    }
+
+    if (! $target) {
+        print STDERR <<EOT;
+$brew_name: $program: command not found
+
+The `$program' command exists in these Perl 6 versions:
+EOT
+        # TODO: Print check other versions and print matching ones here.
+        exit 1;
+    }
+    
+    # Run.
+    exec { $target } ($target, @$args);
+    die "Executing $target failed with: $!";
 }
