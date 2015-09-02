@@ -6,11 +6,12 @@ use Cwd;
 use FindBin qw($Bin);
 use File::Path qw(remove_tree);
 use File::Basename qw(basename dirname);
-use File::Spec::Functions qw(catfile splitpath);
+use File::Spec::Functions qw(catfile splitpath catpath);
 use Carp qw(croak);
 
 my $brew_name = 'rakudobrew';
 $brew_name .= '.pl' if ($^O =~ /win32/i);
+my $env_var = 'PL6ENV_VERSION';
 
 my $arg = shift // 'help';
 my $prefix = "$Bin/..";
@@ -132,6 +133,35 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'exec') {
     my $exec_name = shift;
     do_exec($exec_name, \@ARGV);
+} elsif ($arg eq 'version') {
+    say get_version();
+} elsif ($arg eq 'versions') {
+    my $cur = current() || '';
+    map { say $cur eq $_ ? "* $_" : "  $_" } sort { $a cmp $b } list();
+} elsif ($arg eq 'init') {
+    init(@ARGV);
+} elsif ($arg eq 'sh') {
+    if (!@ARGV) {
+        my $shell_version = get_shell_version();
+        if (defined $shell_version) {
+            print "echo \"$shell_version\"";
+        }
+        else {
+            print "echo \"$brew_name: no shell-specific version configured\"";
+        }
+    }
+    else {
+        my $command = shift;
+        if ($command eq '--unset') {
+            print get_shell_unsetter_code();
+        }
+        else {
+            print get_shell_setter_code($command);
+        }
+    }
+} elsif ($arg eq 'shell') {
+    say "The shell hook required to use the 'shell' subcommands is not installed.";
+    say "Run '$brew_name init' for instructions to installation.";
 } else {
     say "Usage:";
     say "rakudobrew current";
@@ -458,18 +488,112 @@ sub test {
     }
 }
 
-sub do_exec {
-    my ($program, $args) = @_;
+sub not_found {
+    my $version = shift;
+    return "$brew_name: version '$version' not installed.";
+}
 
-    # Check for currently set version.
+sub init {
+    if (@_ and $_[0] eq '-') {
+        my ($vol, $path, undef) = splitpath($0);
+        my $brew_path = catpath($vol, $path, '');
+        say <<EOT;
+export PATH="$brew_path:\${PATH}"
+$brew_name() {
+  local command
+  command="\$1"
+  if [ "\$#" -gt 0 ]; then
+    shift
+  fi
+
+  case "\$command" in
+  shell)
+    eval "`$brew_name "sh" "\$@"`";;
+  *)
+    command $brew_name "\$command" "\$@";;
+  esac
+}
+EOT
+    }
+    else {
+        say <<EOT;
+# Load $brew_name automatically by adding
+#   eval "\$($brew_name init -)"
+# to your local profile file.
+# (often ~/.bash_profile or ~/.profile)
+# This can be easily done using:
+
+echo 'eval "\$($brew_name init -)"' >> ~/.profile
+
+EOT
+    }
+}
+
+sub get_shell_setter_code {
+    my $version = shift;
+
+    if ($^O =~ /win32/i) {
+        #TODO
+    }
+    else {
+        if (check_version($version)) {
+            return "export $env_var=\"$version\"";
+        }
+        else {
+            return 'echo "'.not_found($version).'";return 1';
+        }
+    }
+}
+
+sub get_shell_unsetter_code {
+    if ($^O =~ /win32/i) {
+        #TODO
+    }
+    else {
+        return "unset $env_var";
+    }
+}
+
+sub get_shell_version {
     # Check for shell version by looking for $PL6ENV_VERSION the environment.
-    # TODO
+    if (defined $ENV{$env_var}) {
+        my $version = $ENV{$env_var};
+        if (check_version($version)) {
+            return $version;
+        }
+        else {
+            warn "Version '$version' is set via the PL6ENV_VERSION environment variable.";
+            warn "This version is not installed. Ignoring.";
+            return undef;
+        }
+    }
+    else {
+        return undef;
+    }
+}
+
+sub get_version {
+    my $version = get_shell_version();
+    return $version if defined $version;
     
     # Check for local version by looking for a `.perl6-version` file in the current and parent folders.
     # TODO
 
     # Check for global version by looking at `$prefix/CURRENT` (`$prefix/version`)
-    my $version = current();
+    return current();
+}
+
+sub check_version {
+    my $version = shift;
+    return undef if !defined $version;
+    my %versionsMap = map { $_ => 1 } list();
+    return exists($versionsMap{$version});
+}
+
+sub do_exec {
+    my ($program, $args) = @_;
+
+    my $version = get_version();
     
     # Determine the executable file.
     my $target; {
@@ -498,10 +622,10 @@ sub do_exec {
     }
 
     if (! $target) {
-        print STDERR <<EOT;
+        warn <<EOT;
 $brew_name: $program: command not found
 
-The `$program' command exists in these Perl 6 versions:
+The '$program' command exists in these Perl 6 versions:
 EOT
         # TODO: Print check other versions and print matching ones here.
         exit 1;
