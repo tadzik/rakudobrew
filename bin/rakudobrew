@@ -128,6 +128,10 @@ if ($arg eq 'switch') {
     } else {
         test($impl);
     }
+# plenv interface
+} elsif ($arg eq 'exec') {
+    my $exec_name = shift;
+    do_exec($exec_name, \@ARGV);
 } else {
     say "Usage:";
     say "rakudobrew current";
