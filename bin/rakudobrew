@@ -91,7 +91,7 @@ if ($arg eq 'switch') {
     if (my $c = current()) {
         say "Currently running $c"
     } else {
-        say "Not running anything at the moment. Use 'rakudobrew switch' to set an implementation";
+        say "Not running anything at the moment. Use '$brew_name switch' to set an implementation";
     }
 } elsif ($arg eq 'build') {
     my $impl = shift;
@@ -164,17 +164,17 @@ if ($arg eq 'switch') {
     say "Run '$brew_name init' for instructions to installation.";
 } else {
     say "Usage:";
-    say "rakudobrew current";
-    say "rakudobrew list";
-    say "rakudobrew list-available";
-    say "rakudobrew build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
-    say "rakudobrew build-panda [panda-ver]";
-    say "rakudobrew triple [rakudo-ver [nqp-ver [moar-ver]]]";
-    say "rakudobrew rehash";
-    say "rakudobrew switch ", (join "|", available_backends());
-    say "rakudobrew nuke ", (join "|", available_backends());
-    say "rakudobrew self-upgrade";
-    say "rakudobrew test [", (join "|", available_backends(), "all"), "]";
+    say "$brew_name current";
+    say "$brew_name list";
+    say "$brew_name list-available";
+    say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
+    say "$brew_name build-panda [panda-ver]";
+    say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
+    say "$brew_name rehash";
+    say "$brew_name switch ", (join "|", available_backends());
+    say "$brew_name nuke ", (join "|", available_backends());
+    say "$brew_name self-upgrade";
+    say "$brew_name test [", (join "|", available_backends(), "all"), "]";
 }
 
 exit;
@@ -444,7 +444,7 @@ sub rehash {
         opendir(my $dh, "$prefix/bin");
         while (my $entry = readdir $dh) {
             next if $entry =~ /^\./;
-            next if $entry =~ /rakudobrew/;
+            next if $entry =~ /$brew_name/;
             unlink "$prefix/bin/$entry";
         }
         closedir $dh;
@@ -484,7 +484,7 @@ sub test {
         say $_ for @match;
     } else {
         say "Sorry, I have no idea what '$impl' is";
-        say "Have you run 'rakudobrew build $impl' yet?";
+        say "Have you run '$brew_name build $impl' yet?";
     }
 }
 
