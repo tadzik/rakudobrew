@@ -13,7 +13,6 @@ my $brew_name = 'rakudobrew';
 $brew_name .= '.pl' if ($^O =~ /win32/i);
 my $env_var = 'PL6ENV_VERSION';
 
-my $arg = shift // 'help';
 my $prefix = "$Bin/..";
 my $git_reference = "$prefix/git_reference" ;
 
@@ -67,6 +66,7 @@ sub run {
     }
 }
 
+my $arg = shift // 'help';
 if ($arg eq 'switch') {
     my $impl = shift;
     switch($impl);
