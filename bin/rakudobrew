@@ -175,6 +175,11 @@ if ($arg eq 'switch') {
     say "$brew_name nuke ", (join "|", available_backends());
     say "$brew_name self-upgrade";
     say "$brew_name test [", (join "|", available_backends(), "all"), "]";
+    say "$brew_name exec program [program-args]";
+    say "$brew_name init";
+    say "$brew_name shell [version]";
+    say "$brew_name version";
+    say "$brew_name versions";
 }
 
 exit;
