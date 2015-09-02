@@ -415,33 +415,20 @@ sub rehash {
         my @ret;
         while (my $entry = readdir $dh) {
             next if $entry =~ /^\./;
-            push @ret, "$name/$entry"
+            next if !-f "$name/$entry";
+            push @ret, $entry
         }
         closedir $dh;
         return @ret;
     }
 
-    sub spurt_shim {
-        my ($source, $destdir) = @_;
-        my $dirname  = dirname $source;
-        my $basename = basename $source;
-
-        my $contents;
-        if ($^O =~ /win32/i) {
-            $contents = sprintf "\"%s\" %%*", $source;
-        } else {
-            my $tmpl = "#!/bin/sh\nexport PATH=%s:\$PATH\nexec %s \"\$\@\"";
-            $contents = sprintf $tmpl, $dirname, $basename;
-        }
-
-        spurt("$destdir/$basename", $contents);
-        chmod 0755, "$destdir/$basename";
+    my @paths = ();
+    for my $versions (list()) {
+        push @paths, (
+            catfile($prefix, $versions, 'install', 'bin'),
+            catfile($prefix, $versions, 'install', 'share', 'perl6', 'site', 'bin'),
+        );
     }
-
-    my $current = current() or return;
-    my ($type) = split '-', $current;
-
-    my @paths = ("$prefix/$current/install/bin", "$prefix/$current/install/share/perl6/site/bin");
 
     say "Updating shims";
 
@@ -458,7 +445,7 @@ sub rehash {
     my @bins = map { dir($_) } @paths;
 
     for (@bins) {
-        spurt_shim $_, "$prefix/bin";
+        link $0, "$prefix/bin/$_";
     }
 }
 
