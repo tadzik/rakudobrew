@@ -189,6 +189,13 @@ if ($arg eq 'switch') {
     else {
         switch($ARGV[0]);
     }
+} elsif ($arg eq 'which') {
+    if (!@ARGV) {
+        say STDERR "Usage: $brew_name which <command>";
+    }
+    else {
+        map {say $_} which(@ARGV);
+    }
 } elsif ($arg eq 'whence') {
     if (!@ARGV) {
         say STDERR "Usage: $brew_name whence [--path] <command>";
@@ -216,6 +223,7 @@ if ($arg eq 'switch') {
     say "$brew_name global [version]";
     say "$brew_name version";
     say "$brew_name versions";
+    say "$brew_name which <command>";
     say "$brew_name whence [--path] <command>";
 }
 
@@ -670,11 +678,11 @@ sub get_version {
 sub whence {
     my $param = shift;
     my $pathmode = $param eq '--path';
-    my $exec = $pathmode ? shift : $param;
+    my $prog = $pathmode ? shift : $param;
 
     my @matches = ();
     for my $version (list()) {
-        for my $path (get_bin_paths($version, $exec)) {
+        for my $path (get_bin_paths($version, $prog)) {
             if (-f $path) {
                 if ($pathmode) {
                     push @matches, $path;
@@ -689,19 +697,16 @@ sub whence {
     return @matches;
 }
 
-sub do_exec {
-    my ($program, $args) = @_;
-
+sub which {
+    my $prog = shift;
     my $version = get_version();
-    
-    # Determine the executable file.
     my $target; {
-        my @paths = get_bin_paths($version, $program);
+        my @paths = get_bin_paths($version, $prog);
         if ($^O =~ /win32/i) {
-            # On Windows we have to add a .pl suffix (if not already there) to program filenames
+            # On Windows we have to add a .pl suffix (if not already there) to executable filenames
             # to make them work without having to call perl explicitly. Thus we strip that prefix
             # when searching for the target.
-            my $prog_no_suffix = $program;
+            my $prog_no_suffix = $prog;
             if ($prog_no_suffix =~ s/\.pl$//) {
                 push @paths, get_bin_paths($version, $prog_no_suffix);
             }
@@ -714,15 +719,25 @@ sub do_exec {
         }
     }
 
-    if (! $target) {
-        say STDERR <<EOT;
-$brew_name: $program: command not found
+    if (!$target) {
+        say STDERR "$brew_name: $prog: command not found";
+        if(whence($prog)) {
+            say STDERR <<EOT;
 
-The '$program' command exists in these Perl 6 versions:
+The '$prog' command exists in these Perl 6 versions:
 EOT
-        map {say STDERR $_} whence($program);
+            map {say STDERR $_} whence($prog);
+        }
         exit 1;
     }
+
+    return $target;
+}
+
+sub do_exec {
+    my ($program, $args) = @_;
+
+    my $target = which($program);
     
     # Run.
     exec { $target } ($target, @$args);
