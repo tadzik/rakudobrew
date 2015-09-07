@@ -176,6 +176,19 @@ if ($arg eq 'switch') {
     else {
         set_local_version($ARGV[0]);
     }
+} elsif ($arg eq 'global') {
+    if (!@ARGV) {
+        my $version = current();
+        if ($version) {
+            say $version;
+        }
+        else {
+            say "$brew_name: no global version configured";
+        }
+    }
+    else {
+        switch($ARGV[0]);
+    }
 } else {
     say "Usage:";
     say "$brew_name current";
@@ -191,7 +204,9 @@ if ($arg eq 'switch') {
     say "$brew_name test [", (join "|", available_backends(), "all"), "]";
     say "$brew_name exec program [program-args]";
     say "$brew_name init";
-    say "$brew_name shell [version]";
+    say "$brew_name shell  [version]";
+    say "$brew_name local  [version]";
+    say "$brew_name global [version]";
     say "$brew_name version";
     say "$brew_name versions";
 }
