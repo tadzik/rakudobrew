@@ -224,7 +224,6 @@ sub switch {
         my $matched = shift;
         say "Switching to $matched";
         spurt("$prefix/CURRENT", $matched);
-        rehash();
     })
 }
 
