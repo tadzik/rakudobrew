@@ -163,6 +163,19 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'shell') {
     say "The shell hook required to use the 'shell' subcommands is not installed.";
     say "Run '$brew_name init' for instructions to installation.";
+} elsif ($arg eq 'local') {
+    if (!@ARGV) {
+        my $version = get_local_version();
+        if ($version) {
+            say $version;
+        }
+        else {
+            say "$brew_name: no local version configured for this directory";
+        }
+    }
+    else {
+        set_local_version($ARGV[0]);
+    }
 } else {
     say "Usage:";
     say "$brew_name current";
@@ -592,6 +605,16 @@ sub get_local_version() {
         pop @fragments;
     }
     return undef;
+}
+
+sub set_local_version {
+    my $version = shift;
+    if (check_version($version)) {
+        spurt($local_filename, $version);
+    }
+    else {
+        say STDERR not_found($version);
+    }
 }
 
 sub get_version {
