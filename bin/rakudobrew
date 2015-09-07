@@ -561,8 +561,9 @@ sub get_shell_version {
             return $version;
         }
         else {
-            warn "Version '$version' is set via the PL6ENV_VERSION environment variable.";
-            warn "This version is not installed. Ignoring.";
+            say STDERR "Version '$version' is set via the PL6ENV_VERSION environment variable.";
+            say STDERR "This version is not installed. Ignoring.";
+            say STDERR '';
             return undef;
         }
     }
@@ -582,9 +583,10 @@ sub get_local_version() {
                 return $version;
             }
             else {
-                warn "Version '$version' is given in the";
-                warn "$path";
-                warn "file. This version is not installed. Ignoring.";
+                say STDERR "Version '$version' is given in the";
+                say STDERR "$path";
+                say STDERR "file. This version is not installed. Ignoring.";
+                say STDERR '';
             }
         }
         pop @fragments;
@@ -643,7 +645,7 @@ sub do_exec {
     }
 
     if (! $target) {
-        warn <<EOT;
+        say STDERR <<EOT;
 $brew_name: $program: command not found
 
 The '$program' command exists in these Perl 6 versions:
