@@ -58,12 +58,12 @@ sub run {
 }
 
 { # Check whether we are called as a shim and forward if yes.
-    my (undef, undef, $exec_name) = splitpath($0);
+    my (undef, undef, $prog_name) = splitpath($0);
 
     # TODO: Mac is also case insensitive. Is this way to compensate for insensitivity safe?
-    if ($exec_name ne $brew_name &&
-    ($^O !~ /win32/i || lc $exec_name ne lc $brew_name)) {
-        do_exec($exec_name, \@ARGV);
+    if ($prog_name ne $brew_name &&
+    ($^O !~ /win32/i || lc $prog_name ne lc $brew_name)) {
+        do_exec($prog_name, \@ARGV);
     }
 }
 
@@ -132,8 +132,8 @@ if ($arg eq 'switch') {
     }
 # plenv interface
 } elsif ($arg eq 'exec') {
-    my $exec_name = shift;
-    do_exec($exec_name, \@ARGV);
+    my $prog_name = shift;
+    do_exec($prog_name, \@ARGV);
 } elsif ($arg eq 'version') {
     say get_version();
 } elsif ($arg eq 'versions') {
@@ -703,7 +703,7 @@ sub which {
     my $target; {
         my @paths = get_bin_paths($version, $prog);
         if ($^O =~ /win32/i) {
-            # On Windows we have to add a .pl suffix (if not already there) to executable filenames
+            # On Windows we have to add a .pl suffix (if not already there) to program filenames
             # to make them work without having to call perl explicitly. Thus we strip that prefix
             # when searching for the target.
             my $prog_no_suffix = $prog;
