@@ -585,7 +585,7 @@ sub get_shell_version {
     }
 }
 
-sub get_local_version() {
+sub get_local_version {
     my ($volume, $dir, undef) = splitpath(realpath(), 1);
     my @fragments = splitdir($dir);
     while (@fragments) {
