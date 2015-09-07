@@ -2,16 +2,17 @@
 use strict;
 use warnings;
 use 5.010;
-use Cwd;
+use Cwd qw(realpath);
 use FindBin qw($Bin);
 use File::Path qw(remove_tree);
 use File::Basename qw(basename dirname);
-use File::Spec::Functions qw(catfile splitpath catpath);
+use File::Spec::Functions qw(splitdir catfile catdir splitpath catpath);
 use Carp qw(croak);
 
 my $brew_name = 'rakudobrew';
 $brew_name .= '.pl' if ($^O =~ /win32/i);
 my $env_var = 'PL6ENV_VERSION';
+my $local_filename = '.perl6-version';
 
 my $prefix = "$Bin/..";
 my $git_reference = "$prefix/git_reference" ;
@@ -408,6 +409,12 @@ sub spurt {
     close($fh);
 }
 
+sub trim {
+    my $text = shift;
+    $text =~ s/^\s+|\s+$//g;
+    return $text;
+}
+
 sub rehash {
     sub dir {
         my $name = shift;
@@ -564,12 +571,34 @@ sub get_shell_version {
     }
 }
 
+sub get_local_version() {
+    my ($volume, $dir, undef) = splitpath(realpath(), 1);
+    my @fragments = splitdir($dir);
+    while (@fragments) {
+        my $path = catpath($volume, catdir(@fragments), $local_filename);
+        if (-f $path) {
+            my $version = trim(slurp($path));
+            if(check_version($version)) {
+                return $version;
+            }
+            else {
+                warn "Version '$version' is given in the";
+                warn "$path";
+                warn "file. This version is not installed. Ignoring.";
+            }
+        }
+        pop @fragments;
+    }
+    return undef;
+}
+
 sub get_version {
     my $version = get_shell_version();
     return $version if defined $version;
     
     # Check for local version by looking for a `.perl6-version` file in the current and parent folders.
-    # TODO
+    $version = get_local_version();
+    return $version if defined $version;
 
     # Check for global version by looking at `$prefix/CURRENT` (`$prefix/version`)
     return current();
