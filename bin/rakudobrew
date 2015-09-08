@@ -70,17 +70,17 @@ sub run {
 my $arg = shift // 'help';
 if ($arg eq 'switch') {
     my $impl = shift;
-    switch($impl);
+    set_global_version($impl);
 } elsif ($arg eq 'nuke') {
     my $impl = shift;
     nuke($impl);
 } elsif ($arg eq 'rehash') {
     rehash();
 } elsif ($arg eq 'list') {
-    my $cur = current() || '';
+    my $cur = get_version() // '';
     map { say $cur eq $_ ? "* $_" : "  $_" } sort { $a cmp $b } list();
 } elsif ($arg eq 'list-available') {
-    my ($cur_backend, $cur_rakudo) = split '-', (current() || ''), 2;
+    my ($cur_backend, $cur_rakudo) = split '-', (get_version() // ''), 2;
     $cur_backend |= '';
     $cur_rakudo |= '';
     say "Available backends:";
@@ -89,7 +89,7 @@ if ($arg eq 'switch') {
     say "Available Rakudo versions:";
     map { say $cur_rakudo eq $_ ? "* $_" : "  $_" } available_rakudos();
 } elsif ($arg eq 'current') {
-    if (my $c = current()) {
+    if (my $c = get_version()) {
         say "Currently running $c"
     } else {
         say "Not running anything at the moment. Use '$brew_name switch' to set an implementation";
@@ -135,9 +135,15 @@ if ($arg eq 'switch') {
     my $prog_name = shift;
     do_exec($prog_name, \@ARGV);
 } elsif ($arg eq 'version') {
-    say get_version();
+    if (my $version = get_version()) {
+        say $version;
+    }
+    else {
+        say STDERR "$brew_name: No version set.";
+        exit 1;
+    }
 } elsif ($arg eq 'versions') {
-    my $cur = current() || '';
+    my $cur = get_version() // '';
     map { say $cur eq $_ ? "* $_" : "  $_" } sort { $a cmp $b } list();
 } elsif ($arg eq 'init') {
     init(@ARGV);
@@ -178,7 +184,7 @@ if ($arg eq 'switch') {
     }
 } elsif ($arg eq 'global') {
     if (!@ARGV) {
-        my $version = current();
+        my $version = get_global_version();
         if ($version) {
             say $version;
         }
@@ -187,7 +193,7 @@ if ($arg eq 'switch') {
         }
     }
     else {
-        switch($ARGV[0]);
+        set_global_version($ARGV[0]);
     }
 } elsif ($arg eq 'which') {
     if (!@ARGV) {
@@ -229,7 +235,7 @@ if ($arg eq 'switch') {
 
 exit;
 
-sub current {
+sub get_global_version {
     if (-e "$prefix/CURRENT") {
         my $cur = slurp("$prefix/CURRENT");
         chomp $cur;
@@ -249,7 +255,7 @@ sub list {
           && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'panda'} readdir($dh);
 }
 
-sub switch {
+sub set_global_version {
     my $impl = shift;
     match_and_run($impl, sub {
         my $matched = shift;
@@ -302,7 +308,7 @@ sub build_impl {
     my ($impl, $ver, $configure_opts) = @_;
     unless (defined $impl) {
         say "Build what?";
-        my ($cur) = split '-', (current() // ''), 2;
+        my ($cur) = split '-', (get_version() // ''), 2;
         $cur //= '';
         map { say $cur eq $_ ? "* $_" : "  $_" } available_backends();
         return;
@@ -337,13 +343,10 @@ sub build_impl {
 
     if (-d 'panda') {
         say "Updating panda as well";
-        my $oldcur = current();
-        switch("$impl-$ver");
-        build_panda();
-        switch($oldcur);
+        build_panda(undef, "$impl-$ver");
     }
-    unless (current()) {
-        switch("$impl-$ver");
+    unless (get_version()) {
+        set_global_version("$impl-$ver");
     }
     say "Done, $impl-$ver built";
 }
@@ -410,30 +413,31 @@ sub build_triple {
     }
     if (-d 'panda') {
         say "Updating panda as well";
-        my $oldcur = current();
-        switch($name);
-        build_panda();
-        switch($oldcur);
+        build_panda(undef, $name);
     }
-    unless (current()) {
-        switch($name);
+    unless (get_version()) {
+        set_global_version($name);
     }
     say "Done, $name built";
 }
 
 sub build_panda {
-    my ($panda_ver) = @_;
+    my ($panda_ver, $version) = @_;
     $panda_ver //= 'HEAD';
-    my $impl = current();
-    chdir "$prefix/$impl";
+    $version //= get_version();
+    if (!$version) {
+        say STDERR "$brew_name: No version set.";
+        exit 1;
+    }
+    chdir "$prefix/$version";
     unless (-d 'panda') {
         run "$GIT clone $git_repos{panda}";
     }
     chdir 'panda';
     run "$GIT pull -q";
     run "$GIT checkout -q $panda_ver";
-    run "perl6 rebootstrap.pl";
-    say "Done, built panda for $impl";
+    run which('perl6', $version) . " rebootstrap.pl";
+    say "Done, built panda for $version";
 }
 
 sub slurp {
@@ -473,11 +477,8 @@ sub rehash {
     }
 
     my @paths = ();
-    for my $versions (list()) {
-        push @paths, (
-            catfile($prefix, $versions, 'install', 'bin'),
-            catfile($prefix, $versions, 'install', 'share', 'perl6', 'site', 'bin'),
-        );
+    for my $version (list()) {
+        push @paths, get_bin_paths($version);
     }
 
     say "Updating shims";
@@ -505,9 +506,10 @@ sub self_upgrade {
 }
 
 sub test {
-    my $impl = shift;
+    my $impl = shift || get_version();
     if (!$impl) {
-        $impl = current();
+        say STDERR "$brew_name: No version set.";
+        exit 1;
     }
     my @match = grep { /\Q$impl/ } list();
     my ($matched, $ambiguous) = @match;
@@ -544,10 +546,10 @@ sub check_version {
 
 sub get_bin_paths {
     my $version = shift;
-    my $program = shift || undef;
+    my $program = scalar(shift) || undef;
     return (
-        catfile($prefix, $version, 'install', 'bin', $program || ()),
-        catfile($prefix, $version, 'install', 'share', 'perl6', 'site', 'bin', $program || ()),
+        catfile($prefix, $version, 'install', 'bin', $program // ()),
+        catfile($prefix, $version, 'install', 'share', 'perl6', 'site', 'bin', $program // ()),
     );
 }
 
@@ -672,7 +674,7 @@ sub get_version {
     return $version if defined $version;
 
     # Check for global version by looking at `$prefix/CURRENT` (`$prefix/version`)
-    return current();
+    return get_global_version();
 }
 
 sub whence {
@@ -699,7 +701,12 @@ sub whence {
 
 sub which {
     my $prog = shift;
-    my $version = get_version();
+    my $version = shift // get_version();
+    if (!$version) {
+        say STDERR "$brew_name: No version set.";
+        exit 1;
+    }
+
     my $target; {
         my @paths = get_bin_paths($version, $prog);
         if ($^O =~ /win32/i) {
