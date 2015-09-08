@@ -1,4 +1,4 @@
-Put this in `~/.rakudobrew`, and add symlinks/aliases for convenience.
+Put this in `~/.rakudobrew`, and add aliases for convenience.
 
 It's quick and dirty, may be broken on your system. Please report any breakages.
 
@@ -8,6 +8,7 @@ Installing rakudobrew
 ```
 git clone https://github.com/tadzik/rakudobrew ~/.rakudobrew
 export PATH=~/.rakudobrew/bin:$PATH
+rakudobrew init # Instructions for permanent installation.
 ```
 
 Bootstrapping a Perl 6 implementation
