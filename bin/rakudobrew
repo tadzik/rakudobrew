@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use 5.010;
-use Cwd qw(realpath);
+use Cwd qw(cwd realpath);
 use FindBin qw($Bin);
 use File::Path qw(remove_tree);
 use File::Basename qw(basename dirname);
