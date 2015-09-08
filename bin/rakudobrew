@@ -69,11 +69,11 @@ sub run {
 
 my $arg = shift // 'help';
 if ($arg eq 'switch') {
-    my $impl = shift;
-    set_global_version($impl);
+    my $version = shift;
+    set_global_version($version);
 } elsif ($arg eq 'nuke') {
-    my $impl = shift;
-    nuke($impl);
+    my $version = shift;
+    nuke($version);
 } elsif ($arg eq 'rehash') {
     rehash();
 } elsif ($arg eq 'list') {
@@ -92,7 +92,7 @@ if ($arg eq 'switch') {
     if (my $c = get_version()) {
         say "Currently running $c"
     } else {
-        say "Not running anything at the moment. Use '$brew_name switch' to set an implementation";
+        say "Not running anything at the moment. Use '$brew_name switch' to set a version";
     }
 } elsif ($arg eq 'build') {
     my $impl = shift;
@@ -122,13 +122,13 @@ if ($arg eq 'switch') {
 } elsif ($arg eq 'self-upgrade') {
     self_upgrade();
 } elsif ($arg eq 'test') {
-    my $impl = shift;
-    if ($impl && $impl eq 'all') {
+    my $version = shift;
+    if ($version && $version eq 'all') {
         for (list()) {
             test($_);
         }
     } else {
-        test($impl);
+        test($version);
     }
 # plenv interface
 } elsif ($arg eq 'exec') {
@@ -256,8 +256,8 @@ sub list {
 }
 
 sub set_global_version {
-    my $impl = shift;
-    match_and_run($impl, sub {
+    my $version = shift;
+    match_and_run($version, sub {
         my $matched = shift;
         say "Switching to $matched";
         spurt("$prefix/CURRENT", $matched);
@@ -265,8 +265,8 @@ sub set_global_version {
 }
 
 sub nuke {
-    my $impl = shift;
-    match_and_run($impl, sub {
+    my $version = shift;
+    match_and_run($version, sub {
         my $matched = shift;
         say "Nuking $matched";
         remove_tree("$prefix/$matched");
@@ -274,18 +274,18 @@ sub nuke {
 }
 
 sub match_and_run {
-    my ($impl, $action) = @_;
-    if (!$impl) {
+    my ($version, $action) = @_;
+    if (!$version) {
         say "Switch to what?";
         say "Available builds";
         map {say} list();
         return;
     }
     opendir(my $dh, $prefix);
-    my @match = grep { /\Q$impl/ } list();
+    my @match = grep { /\Q$version/ } list();
     my ($matched, $ambiguous) = @match;
     if ($ambiguous) {
-        my ($exact) = grep { $_ eq $impl } @match;
+        my ($exact) = grep { $_ eq $version } @match;
         if ($exact) {
             ($matched, $ambiguous) = $exact;
         }
@@ -296,7 +296,7 @@ sub match_and_run {
         say "Sorry, I'm not sure if you mean:";
         say $_ for @match;
     } else {
-        say "Sorry, I have no idea what '$impl' is";
+        say "Sorry, I have no idea what '$version' is";
     }
 }
 
@@ -506,15 +506,15 @@ sub self_upgrade {
 }
 
 sub test {
-    my $impl = shift || get_version();
-    if (!$impl) {
+    my $version = shift || get_version();
+    if (!$version) {
         say STDERR "$brew_name: No version set.";
         exit 1;
     }
-    my @match = grep { /\Q$impl/ } list();
+    my @match = grep { /\Q$version/ } list();
     my ($matched, $ambiguous) = @match;
     if ($ambiguous) {
-        my ($exact) = grep { $_ eq $impl } @match;
+        my ($exact) = grep { $_ eq $version } @match;
         if ($exact) {
             ($matched, $ambiguous) = $exact;
         }
@@ -527,8 +527,8 @@ sub test {
         say "Sorry, I'm not sure if you mean:";
         say $_ for @match;
     } else {
-        say "Sorry, I have no idea what '$impl' is";
-        say "Have you run '$brew_name build $impl' yet?";
+        say "Sorry, I have no idea what '$version' is";
+        say "Have you run '$brew_name build $version' yet?";
     }
 }
 
