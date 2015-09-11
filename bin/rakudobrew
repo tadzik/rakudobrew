@@ -76,7 +76,7 @@ if ($arg eq 'switch') {
     nuke($version);
 } elsif ($arg eq 'rehash') {
     rehash();
-} elsif ($arg eq 'list') {
+} elsif ($arg eq 'list' or $arg eq 'versions') {
     my $cur = get_version() // '';
     map { say $cur eq $_ ? "* $_" : "  $_" } sort { $a cmp $b } list();
 } elsif ($arg eq 'list-available') {
@@ -142,9 +142,6 @@ if ($arg eq 'switch') {
         say STDERR "$brew_name: No version set.";
         exit 1;
     }
-} elsif ($arg eq 'versions') {
-    my $cur = get_version() // '';
-    map { say $cur eq $_ ? "* $_" : "  $_" } sort { $a cmp $b } list();
 } elsif ($arg eq 'init') {
     init(@ARGV);
 } elsif ($arg eq 'sh') {
@@ -212,7 +209,6 @@ if ($arg eq 'switch') {
 } else {
     say "Usage:";
     say "$brew_name current";
-    say "$brew_name list";
     say "$brew_name list-available";
     say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
     say "$brew_name build-panda [panda-ver]";
@@ -228,7 +224,7 @@ if ($arg eq 'switch') {
     say "$brew_name local [version]";
     say "$brew_name global [version]";
     say "$brew_name version";
-    say "$brew_name versions";
+    say "$brew_name versions # or $brew_name list";
     say "$brew_name which <command>";
     say "$brew_name whence [--path] <command>";
 }
