@@ -257,7 +257,7 @@ sub set_global_version {
         my $matched = shift;
         say "Switching to $matched";
         spurt(catfile($prefix, 'CURRENT'), $matched);
-    })
+    });
 }
 
 sub nuke {
@@ -266,7 +266,9 @@ sub nuke {
         my $matched = shift;
         say "Nuking $matched";
         remove_tree(catdir($prefix, $matched));
-    })
+    });
+    # Might have lost executables -> rehash.
+    rehash();
 }
 
 sub match_and_run {
@@ -341,6 +343,8 @@ sub build_impl {
         say "Updating panda as well";
         build_panda(undef, "$impl-$ver");
     }
+    # Might have new executables now -> rehash.
+    rehash();
     unless (get_version()) {
         set_global_version("$impl-$ver");
     }
@@ -411,6 +415,8 @@ sub build_triple {
         say "Updating panda as well";
         build_panda(undef, $name);
     }
+    # Might have new executables now -> rehash.
+    rehash();
     unless (get_version()) {
         set_global_version($name);
     }
@@ -433,6 +439,8 @@ sub build_panda {
     run "$GIT pull -q";
     run "$GIT checkout -q $panda_ver";
     run which('perl6', $version) . " rebootstrap.pl";
+    # Might have new executables now -> rehash.
+    rehash();
     say "Done, built panda for $version";
 }
 
