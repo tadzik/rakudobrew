@@ -12,7 +12,7 @@ export PATH=~/.rakudobrew/bin:$PATH
 rakudobrew init # Instructions for permanent installation.
 ```
 
-On Windws do:
+On Windows CMD do:
 ```
 git clone https://github.com/tadzik/rakudobrew %USERPROFILE%\rakudobrew
 SET PATH "%USERPROFILE%\rakudobrew\bin;%PATH%"
