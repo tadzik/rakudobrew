@@ -5,9 +5,24 @@ It's quick and dirty, may be broken on your system. Please report any breakages.
 Installing rakudobrew
 ---------------------
 
+On *nix do:
 ```
 git clone https://github.com/tadzik/rakudobrew ~/.rakudobrew
 export PATH=~/.rakudobrew/bin:$PATH
+rakudobrew init # Instructions for permanent installation.
+```
+
+On Windws do:
+```
+git clone https://github.com/tadzik/rakudobrew %USERPROFILE%\rakudobrew
+SET PATH "%USERPROFILE%\rakudobrew\bin;%PATH%"
+rakudobrew init # Instructions for permanent installation.
+```
+
+On Windws PowerShell do:
+```
+git clone https://github.com/tadzik/rakudobrew $Env:USERPROFILE\rakudobrew
+$Env:PATH = "$Env:USERPROFILE\rakudobrew\bin;$Env:PATH"
 rakudobrew init # Instructions for permanent installation.
 ```
 

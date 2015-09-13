@@ -10,7 +10,6 @@ use File::Spec::Functions qw(catfile catdir splitdir splitpath catpath updir);
 use Carp qw(croak);
 
 my $brew_name = 'rakudobrew';
-$brew_name .= '.pl' if ($^O =~ /win32/i);
 my $env_var = 'PL6ENV_VERSION';
 my $local_filename = '.perl6-version';
 
@@ -164,8 +163,22 @@ if ($arg eq 'switch') {
         }
     }
 } elsif ($arg eq 'shell') {
-    say "The shell hook required to use the 'shell' subcommands is not installed.";
-    say "Run '$brew_name init' for instructions to installation.";
+    if ($^O =~ /win32/i) {
+        say <<EOT;
+To (un)set a version locally in this running shell session use the following commands:
+CMD:
+set PL6_VERSION="YOUR_VERSION"
+set PL6_VERSION=                # Unset. No trailing whitespace!
+
+PowerShell:
+\$Env:PL6_VERSION="YOUR_VERSION"
+Remove-Item Env:\\PL6_VERSION    # Unset.
+EOT
+    }
+    else {
+        say "The shell hook required to use the 'shell' subcommands is not installed.";
+        say "Run '$brew_name init' for installation instructions.";
+    }
 } elsif ($arg eq 'local') {
     if (!@ARGV) {
         my $version = get_local_version();
@@ -492,6 +505,7 @@ sub rehash {
         while (my $entry = readdir $dh) {
             next if $entry =~ /^\./;
             next if $entry =~ /$brew_name/;
+            next if $entry =~ /$brew_name\.cmd/;
             unlink catfile($prefix, 'bin', $entry);
         }
         closedir $dh;
@@ -500,7 +514,12 @@ sub rehash {
     my @bins = map { dir($_) } @paths;
 
     for (@bins) {
-        link $0, catfile($prefix, 'bin', $_);
+		if ($^O =~ /win32/i) {
+			spurt(catfile($prefix, 'bin', $_), '"perl" '.catfile($prefix, 'bin', $brew_name)." exec $_ \%*");
+		}
+		else {
+			link $0, catfile($prefix, 'bin', $_);
+		}
     }
 }
 
@@ -558,10 +577,33 @@ sub get_bin_paths {
 }
 
 sub init {
-    if (@_ and $_[0] eq '-') {
-        my ($vol, $path, undef) = splitpath($0);
-        my $brew_path = catpath($vol, $path, '');
+    my ($vol, $path, undef) = splitpath(realpath(), 1);
+    my $brew_path = catpath($vol, $path, '');
+    my $brew_exec = catfile($brew_path, $brew_name);
+    if ($^O =~ /win32/i) {
         say <<EOT;
+# CMD:
+# To install $brew_name permanently type the following into your terminal:
+#   SETX PATH "%PATH%;$brew_path"
+# To make use of $brew_name in this session only use
+#   SET PATH "%PATH%;$brew_path"
+#
+# PowerShell:
+# To install $brew_name permanently type the following into your terminal
+# (only works with an administrative console window):
+#   [Environment]::SetEnvironmentVariable("PATH", "\$Env:PATH;$brew_path", "User")
+# To make use of $brew_name in this session only use
+#   \$Env:PATH = "\$Env:PATH;$brew_path"
+#
+# Using the GUI:
+# Start -> right click on "Computer" -> Properties -> (Advanced system settings)
+# -> Advanced -> Environment Variables... ->  System variables
+# -> select PATH -> Edit... -> append ";$brew_path"
+EOT
+    }
+    else {
+        if (@_ and $_[0] eq '-') {
+            say <<EOT;
 export PATH="$brew_path:\${PATH}"
 $brew_name() {
   local command
@@ -578,18 +620,19 @@ $brew_name() {
   esac
 }
 EOT
-    }
-    else {
+        }
+        else {
         say <<EOT;
 # Load $brew_name automatically by adding
-#   eval "\$($brew_name init -)"
+#   eval "\$($brew_exec init -)"
 # to your local profile file.
 # (often ~/.bash_profile or ~/.profile)
 # This can be easily done using:
 
-echo 'eval "\$($brew_name init -)"' >> ~/.profile
+echo 'eval "\$($brew_exec init -)"' >> ~/.profile
 
 EOT
+        }
     }
 }
 
@@ -597,7 +640,8 @@ sub get_shell_setter_code {
     my $version = shift;
 
     if ($^O =~ /win32/i) {
-        #TODO
+        #NYI on windows.
+        die;
     }
     else {
         if (check_version($version)) {
@@ -611,7 +655,8 @@ sub get_shell_setter_code {
 
 sub get_shell_unsetter_code {
     if ($^O =~ /win32/i) {
-        #TODO
+        #NYI on Windows.
+        die;
     }
     else {
         return "unset $env_var";
@@ -638,18 +683,18 @@ sub get_shell_version {
 }
 
 sub get_local_version {
-    my ($volume, $dir, undef) = splitpath(realpath(), 1);
-    my @fragments = splitdir($dir);
+    my ($vol, $path, undef) = splitpath(realpath(), 1);
+    my @fragments = splitdir($path);
     while (@fragments) {
-        my $path = catpath($volume, catdir(@fragments), $local_filename);
-        if (-f $path) {
-            my $version = trim(slurp($path));
+        my $filepath = catpath($vol, catdir(@fragments), $local_filename);
+        if (-f $filepath) {
+            my $version = trim(slurp($filepath));
             if(check_version($version)) {
                 return $version;
             }
             else {
                 say STDERR "Version '$version' is given in the";
-                say STDERR "$path";
+                say STDERR "$filepath";
                 say STDERR "file. This version is not installed. Ignoring.";
                 say STDERR '';
             }
