@@ -3,6 +3,6 @@ parrot-*/
 jvm-*/
 moarvm-*/
 bin/*
+git_reference/
 !bin/rakudobrew
 !bin/rakudobrew.cmd
-CURRENT
