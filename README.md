@@ -26,6 +26,18 @@ $Env:PATH = "$Env:USERPROFILE\rakudobrew\bin;$Env:PATH"
 rakudobrew init # Instructions for permanent installation.
 ```
 
+Windows specialities
+--------------------
+
+On Windows MSVC is required for compilation. It can be freely obtained from Microsoft:
+<https://www.microsoft.com/en-us/download/details.aspx?id=48159>
+After installation make sure you have the respective path added to your PATH environment variable.
+It's usually something like: `C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin`
+If you can run the command `nmake` directly from your terminal you have succeeded.
+
+It might be necessary to use an Administrative console to work
+around a problem with permissions that go wrong during the build process.
+
 Bootstrapping a Perl 6 implementation
 -------------------------------------
 
