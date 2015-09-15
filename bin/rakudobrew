@@ -377,6 +377,23 @@ sub update_git_reference {
     chdir $back;
 }
 
+sub make {
+    my $command = shift;
+	if(!-f 'Makefile') {
+	    say STDERR "No Makefile found. Aborting.";
+		exit 1;
+    }
+	my $makefile = slurp('Makefile');
+	if($makefile =~ /^MAKE\s*=\s*(\w+)\s*$/m) {
+        my $make = $1;
+        run("$make $command");
+	}
+	else {
+        say STDERR "Couldn't determine correct make program. Aborting.";
+		exit 1;
+    }
+}
+
 sub build_triple {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = @_;
     my $impl = "moar";
@@ -393,7 +410,7 @@ sub build_triple {
     run "$GIT pull";
     run "$GIT checkout $rakudo_ver";
     if (-e 'Makefile') {
-        run 'make realclean';
+        make('realclean');
     }
 
     unless (-d "nqp") {
@@ -412,18 +429,16 @@ sub build_triple {
     run "$GIT pull";
     run "$GIT checkout $moar_ver";
     run "$PERL5 Configure.pl --prefix=" . catdir(updir(), updir(), 'install');
-    run "make install";
+    make('install');
 
     chdir updir();
     run "$PERL5 Configure.pl --backend=moar --prefix=" . catdir(updir(), 'install');
-    run "make install";
+    make('install');
 
     chdir updir();
     run "$PERL5 Configure.pl --backend=moar";
+    make('install');
 
-    if (system 'make install') {
-        die "Failed running make install";
-    }
     if (-d 'panda') {
         say "Updating panda as well";
         build_panda(undef, $name);
@@ -545,7 +560,7 @@ sub test {
     if ($matched and not $ambiguous) {
         say "Spectesting $matched";
         chdir catdir($prefix, $matched);
-        run "make spectest";
+        make('spectest');
     } elsif (@match) {
         say "Sorry, I'm not sure if you mean:";
         say $_ for @match;
