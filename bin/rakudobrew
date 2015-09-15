@@ -592,34 +592,32 @@ sub get_bin_paths {
 }
 
 sub init {
-    my ($vol, $path, undef) = splitpath(realpath(), 1);
-    my $brew_path = catpath($vol, $path, '');
-    my $brew_exec = catfile($brew_path, $brew_name);
+    my $brew_exec = catfile($Bin, $brew_name);
     if ($^O =~ /win32/i) {
         say <<EOT;
 # CMD:
 # To install $brew_name permanently type the following into your terminal:
-#   SETX PATH "%PATH%;$brew_path"
+#   SETX PATH "%PATH%;$Bin"
 # To make use of $brew_name in this session only use
-#   SET PATH "%PATH%;$brew_path"
+#   SET PATH "%PATH%;$Bin"
 #
 # PowerShell:
 # To install $brew_name permanently type the following into your terminal
 # (only works with an administrative console window):
-#   [Environment]::SetEnvironmentVariable("PATH", "\$Env:PATH;$brew_path", "User")
+#   [Environment]::SetEnvironmentVariable("PATH", "\$Env:PATH;$Bin", "User")
 # To make use of $brew_name in this session only use
-#   \$Env:PATH = "\$Env:PATH;$brew_path"
+#   \$Env:PATH = "\$Env:PATH;$Bin"
 #
 # Using the GUI:
 # Start -> right click on "Computer" -> Properties -> (Advanced system settings)
 # -> Advanced -> Environment Variables... ->  System variables
-# -> select PATH -> Edit... -> append ";$brew_path"
+# -> select PATH -> Edit... -> append ";$Bin"
 EOT
     }
     else {
         if (@_ and $_[0] eq '-') {
             say <<EOT;
-export PATH="$brew_path:\${PATH}"
+export PATH="$Bin:\${PATH}"
 $brew_name() {
   local command
   command="\$1"
