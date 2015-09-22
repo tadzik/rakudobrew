@@ -61,7 +61,7 @@ sub run {
 
     # TODO: Mac is also case insensitive. Is this way to compensate for insensitivity safe?
     if ($prog_name ne $brew_name &&
-    ($^O !~ /win32/i || lc $prog_name ne lc $brew_name)) {
+    ($^O !~ /win32/i || $prog_name =~ /^\Q$brew_name\E\z/i)) {
         do_exec($prog_name, \@ARGV);
     }
 }
