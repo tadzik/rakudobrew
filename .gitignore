@@ -5,4 +5,4 @@ moar-*/
 bin/*
 git_reference/
 !bin/rakudobrew
-!bin/rakudobrew.cmd
+!bin/rakudobrew.bat

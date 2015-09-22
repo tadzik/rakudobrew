@@ -503,7 +503,7 @@ sub rehash {
         while (my $entry = readdir $dh) {
             next if $entry =~ /^\./;
             next if $entry =~ /$brew_name/;
-            next if $entry =~ /$brew_name\.cmd/;
+            next if $entry =~ /$brew_name\.bat/;
             unlink catfile($prefix, 'bin', $entry);
         }
         closedir $dh;
