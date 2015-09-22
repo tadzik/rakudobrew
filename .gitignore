@@ -2,6 +2,7 @@ CURRENT
 parrot-*/
 jvm-*/
 moar-*/
+pre-glr-nom/
 bin/*
 git_reference/
 !bin/rakudobrew
