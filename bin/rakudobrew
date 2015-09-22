@@ -582,7 +582,7 @@ sub init {
 # To install $brew_name permanently type the following into your terminal:
 #   SETX PATH "%PATH%;$Bin"
 # To make use of $brew_name in this session only use
-#   SET PATH "%PATH%;$Bin"
+#   SET PATH=%PATH%;$Bin
 #
 # PowerShell:
 # To install $brew_name permanently type the following into your terminal
