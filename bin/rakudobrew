@@ -244,14 +244,6 @@ EOT
 
 exit;
 
-sub get_global_version {
-    if (-e catdir($prefix, 'CURRENT')) {
-        my $cur = slurp(catdir($prefix, 'CURRENT'));
-        chomp $cur;
-        return $cur;
-    }
-}
-
 sub available_rakudos {
     my @output = qx|$GIT ls-remote --tags $git_repos{rakudo}|;
     my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
@@ -262,15 +254,6 @@ sub list {
     opendir(my $dh, $prefix);
     grep {/^[^.]/ && -d catdir($prefix, $_)
           && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'panda'} readdir($dh);
-}
-
-sub set_global_version {
-    my $version = shift;
-    match_and_run($version, sub {
-        my $matched = shift;
-        say "Switching to $matched";
-        spurt(catfile($prefix, 'CURRENT'), $matched);
-    });
 }
 
 sub nuke {
@@ -725,6 +708,27 @@ sub set_local_version {
     else {
         say STDERR not_found($version);
     }
+}
+
+
+sub get_global_version {
+    if (-e catdir($prefix, 'CURRENT')) {
+        my $cur = slurp(catdir($prefix, 'CURRENT'));
+        chomp $cur;
+        return $cur;
+    }
+    else {
+        return undef;
+    }
+}
+
+sub set_global_version {
+    my $version = shift;
+    match_and_run($version, sub {
+        my $matched = shift;
+        say "Switching to $matched";
+        spurt(catfile($prefix, 'CURRENT'), $matched);
+    });
 }
 
 sub get_version {
