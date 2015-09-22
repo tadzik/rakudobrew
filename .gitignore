@@ -1,7 +1,9 @@
 CURRENT
 parrot-*/
 jvm-*/
-moarvm-*/
+moar-*/
+pre-glr-nom/
 bin/*
+git_reference/
 !bin/rakudobrew
-CURRENT
+!bin/rakudobrew.bat

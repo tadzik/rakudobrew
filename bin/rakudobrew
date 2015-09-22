@@ -5,17 +5,16 @@ use 5.010;
 use Cwd qw(cwd realpath);
 use FindBin qw($Bin);
 use File::Path qw(remove_tree);
-use File::Basename qw(basename dirname);
-use File::Spec::Functions qw(splitdir catfile catdir splitpath catpath);
+use File::Basename;
+use File::Spec::Functions qw(catfile catdir splitdir splitpath catpath updir);
 use Carp qw(croak);
 
 my $brew_name = 'rakudobrew';
-$brew_name .= '.pl' if ($^O =~ /win32/i);
 my $env_var = 'PL6ENV_VERSION';
 my $local_filename = '.perl6-version';
 
-my $prefix = "$Bin/..";
-my $git_reference = "$prefix/git_reference" ;
+my $prefix = catdir($Bin, updir());
+my $git_reference = catfile($prefix, 'git_reference');
 
 unless (-d $git_reference) {
     mkdir $git_reference;
@@ -62,7 +61,7 @@ sub run {
 
     # TODO: Mac is also case insensitive. Is this way to compensate for insensitivity safe?
     if ($prog_name ne $brew_name &&
-    ($^O !~ /win32/i || lc $prog_name ne lc $brew_name)) {
+    ($^O !~ /win32/i || $prog_name =~ /^\Q$brew_name\E\z/i)) {
         do_exec($prog_name, \@ARGV);
     }
 }
@@ -164,8 +163,22 @@ if ($arg eq 'switch') {
         }
     }
 } elsif ($arg eq 'shell') {
-    say "The shell hook required to use the 'shell' subcommands is not installed.";
-    say "Run '$brew_name init' for instructions to installation.";
+    if ($^O =~ /win32/i) {
+        say <<EOT;
+To (un)set a version locally in this running shell session use the following commands:
+CMD:
+SET PL6_VERSION=YOUR_VERSION
+SET PL6_VERSION=                # Unset. No trailing whitespace!
+
+PowerShell:
+\$Env:PL6_VERSION="YOUR_VERSION"
+Remove-Item Env:\\PL6_VERSION    # Unset.
+EOT
+    }
+    else {
+        say "The shell hook required to use the 'shell' subcommands is not installed.";
+        say "Run '$brew_name init' for installation instructions.";
+    }
 } elsif ($arg eq 'local') {
     if (!@ARGV) {
         my $version = get_local_version();
@@ -206,6 +219,39 @@ if ($arg eq 'switch') {
     else {
         map {say $_} whence(@ARGV);
     }
+} elsif ($arg eq 'win-run') {
+    my $prog_name = shift;
+    my $path = which($prog_name);
+    # Do some filetype detection:
+    # - .exe/.bat/.cmd              -> return "filename"
+    # - .nqp                        -> return "nqp filename"
+    # - shebang line contains perl6 -> return "perl6 filename"
+    # - shebang line contains perl  -> return "perl filename"
+    # - nothing of the above        -> return "filename" # if we can't
+    #                                  figure out what to do with this
+    #                                  filename, let Windows have a try.
+    # The first line is potentially the shebang. Thus the search for "perl" and/or perl6.
+    my ($basename, undef, $suffix) = my_fileparse($prog_name);
+    if($suffix =~ /^\Q\.(exe|bat|cmd)\E\z/i) {
+        say $path;
+    }
+    elsif($suffix =~ /^\Q\.nqp\E\z/i) {
+        say which('nqp').' '.$path;
+    }
+    else {
+        open(my $fh, '<', $path);
+        my $first_line = <$fh>;
+        close($fh);
+        if($first_line =~ /#!.*perl6/) {
+            say which('perl6').' '.$path;
+        }
+        elsif($first_line =~ /#!.*perl/) {
+            say 'perl '.$path;
+        }
+        else {
+            say $path;
+        }
+    }
 } else {
     say "Usage:";
     say "$brew_name current";
@@ -231,14 +277,6 @@ if ($arg eq 'switch') {
 
 exit;
 
-sub get_global_version {
-    if (-e "$prefix/CURRENT") {
-        my $cur = slurp("$prefix/CURRENT");
-        chomp $cur;
-        return $cur;
-    }
-}
-
 sub available_rakudos {
     my @output = qx|$GIT ls-remote --tags $git_repos{rakudo}|;
     my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
@@ -247,17 +285,8 @@ sub available_rakudos {
 
 sub list {
     opendir(my $dh, $prefix);
-    grep {/^[^.]/ && -d "$prefix/$_"
+    grep {/^[^.]/ && -d catdir($prefix, $_)
           && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'panda'} readdir($dh);
-}
-
-sub set_global_version {
-    my $version = shift;
-    match_and_run($version, sub {
-        my $matched = shift;
-        say "Switching to $matched";
-        spurt("$prefix/CURRENT", $matched);
-    })
 }
 
 sub nuke {
@@ -265,8 +294,10 @@ sub nuke {
     match_and_run($version, sub {
         my $matched = shift;
         say "Nuking $matched";
-        remove_tree("$prefix/$matched");
-    })
+        remove_tree(catdir($prefix, $matched));
+    });
+    # Might have lost executables -> rehash.
+    rehash();
 }
 
 sub match_and_run {
@@ -341,6 +372,8 @@ sub build_impl {
         say "Updating panda as well";
         build_panda(undef, "$impl-$ver");
     }
+    # Might have new executables now -> rehash.
+    rehash();
     unless (get_version()) {
         set_global_version("$impl-$ver");
     }
@@ -360,6 +393,23 @@ sub update_git_reference {
     chdir $back;
 }
 
+sub make {
+    my $command = shift;
+    if(!-f 'Makefile') {
+        say STDERR "No Makefile found. Aborting.";
+        exit 1;
+    }
+    my $makefile = slurp('Makefile');
+    if($makefile =~ /^MAKE\s*=\s*(\w+)\s*$/m) {
+        my $make = $1;
+        run("$make $command");
+    }
+    else {
+        say STDERR "Couldn't determine correct make program. Aborting.";
+        exit 1;
+    }
+}
+
 sub build_triple {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = @_;
     my $impl = "moar";
@@ -376,7 +426,7 @@ sub build_triple {
     run "$GIT pull";
     run "$GIT checkout $rakudo_ver";
     if (-e 'Makefile') {
-        run 'make realclean';
+        make('realclean');
     }
 
     unless (-d "nqp") {
@@ -394,23 +444,23 @@ sub build_triple {
     chdir "MoarVM";
     run "$GIT pull";
     run "$GIT checkout $moar_ver";
-    run "$PERL5 Configure.pl --prefix=../../install";
-    run "make install";
+    run "$PERL5 Configure.pl --prefix=" . catdir(updir(), updir(), 'install');
+    make('install');
 
-    chdir "..";
-    run "$PERL5 Configure.pl --backend=moar --prefix=../install";
-    run "make install";
+    chdir updir();
+    run "$PERL5 Configure.pl --backend=moar --prefix=" . catdir(updir(), 'install');
+    make('install');
 
-    chdir "..";
+    chdir updir();
     run "$PERL5 Configure.pl --backend=moar";
+    make('install');
 
-    if (system 'make install') {
-        die "Failed running make install";
-    }
     if (-d 'panda') {
         say "Updating panda as well";
         build_panda(undef, $name);
     }
+    # Might have new executables now -> rehash.
+    rehash();
     unless (get_version()) {
         set_global_version($name);
     }
@@ -425,7 +475,7 @@ sub build_panda {
         say STDERR "$brew_name: No version set.";
         exit 1;
     }
-    chdir "$prefix/$version";
+    chdir catdir($prefix, $version);
     unless (-d 'panda') {
         run "$GIT clone $git_repos{panda}";
     }
@@ -433,6 +483,8 @@ sub build_panda {
     run "$GIT pull -q";
     run "$GIT checkout -q $panda_ver";
     run which('perl6', $version) . " rebootstrap.pl";
+    # Might have new executables now -> rehash.
+    rehash();
     say "Done, built panda for $version";
 }
 
@@ -458,20 +510,35 @@ sub trim {
     return $text;
 }
 
-sub rehash {
-    sub dir {
-        my $name = shift;
-        opendir(my $dh, $name) or return;
-        my @ret;
-        while (my $entry = readdir $dh) {
-            next if $entry =~ /^\./;
-            next if !-f "$name/$entry";
-            push @ret, $entry
-        }
-        closedir $dh;
-        return @ret;
-    }
+sub check_prog_name_match {
+    my ($prog, $filename) = @_;
+    my ($basename, undef, undef) = my_fileparse($filename);
+    return $prog =~ /^\Q$basename\E\z/i;
+}
 
+sub uniq {
+    my %seen;
+    return grep { !$seen{$_}++ } @_;
+}
+
+sub slurp_dir {
+    my $name = shift;
+    opendir(my $dh, $name) or return;
+    my @ret;
+    while (my $entry = readdir $dh) {
+        next if $entry =~ /^\./;
+        next if !-f catfile($name, $entry);
+        push @ret, $entry
+    }
+    closedir $dh;
+    return @ret;
+}
+
+sub my_fileparse {
+    return fileparse(shift, ('.dll.lib', qr/\.[^.]+/));
+}
+
+sub rehash {
     my @paths = ();
     for my $version (list()) {
         push @paths, get_bin_paths($version);
@@ -480,19 +547,41 @@ sub rehash {
     say "Updating shims";
 
     { # Remove the existing shims.
-        opendir(my $dh, "$prefix/bin");
+        opendir(my $dh, catdir($prefix, 'bin'));
         while (my $entry = readdir $dh) {
             next if $entry =~ /^\./;
             next if $entry =~ /$brew_name/;
-            unlink "$prefix/bin/$entry";
+            next if $entry =~ /$brew_name\.bat/;
+            unlink catfile($prefix, 'bin', $entry);
         }
         closedir $dh;
     }
 
-    my @bins = map { dir($_) } @paths;
+    my @bins = map { slurp_dir($_) } @paths;
 
-    for (@bins) {
-        link $0, "$prefix/bin/$_";
+    if ($^O =~ /win32/i) {
+        # This wrapper is needed because:
+        # - We want rakudobrew to work even when the .pl ending is not associated with the perl program and we do not want to put `perl` before every call to a shim.
+        # - exec() in perl on Windows behaves differently from running the target program directly (output ends up on the console differently).
+        # It retrieves the target executable (only consuming STDOUT of rakudobrew) and calls it with the given arguments. STDERR still ends up on the console. The return value is checked and if an error occurs that error values is returned.
+        @bins = map { my ($basename, undef, undef) = my_fileparse($_); $basename } @bins;
+        @bins = uniq(@bins);
+        for (@bins) {
+            spurt(catfile($prefix, 'bin', $_.'.bat'), <<EOT);
+\@ECHO OFF
+SETLOCAL
+SET brew_cmd=perl \%~dp0$brew_name win-run \%~n0
+FOR /F "delims=" \%\%i IN ('\%brew_cmd\%') DO SET command=\%\%i
+IF NOT ERRORLEVEL 0 EXIT /B \%errorlevel\%
+IF     ERRORLEVEL 1 EXIT /B \%errorlevel\%
+\%command\% \%*
+EOT
+        }
+    }
+    else {
+        for (@bins) {
+            link $0, catfile($prefix, 'bin', $_);
+        }
     }
 }
 
@@ -517,8 +606,8 @@ sub test {
     }
     if ($matched and not $ambiguous) {
         say "Spectesting $matched";
-        chdir "$prefix/$matched";
-        run "make spectest";
+        chdir catdir($prefix, $matched);
+        make('spectest');
     } elsif (@match) {
         say "Sorry, I'm not sure if you mean:";
         say $_ for @match;
@@ -550,11 +639,32 @@ sub get_bin_paths {
 }
 
 sub init {
-    if (@_ and $_[0] eq '-') {
-        my ($vol, $path, undef) = splitpath($0);
-        my $brew_path = catpath($vol, $path, '');
+    my $brew_exec = catfile($Bin, $brew_name);
+    if ($^O =~ /win32/i) {
         say <<EOT;
-export PATH="$brew_path:\${PATH}"
+# CMD:
+# To install $brew_name permanently type the following into your terminal:
+#   SETX PATH "%PATH%;$Bin"
+# To make use of $brew_name in this session only use
+#   SET PATH=%PATH%;$Bin
+#
+# PowerShell:
+# To install $brew_name permanently type the following into your terminal
+# (only works with an administrative console window):
+#   [Environment]::SetEnvironmentVariable("PATH", "\$Env:PATH;$Bin", "User")
+# To make use of $brew_name in this session only use
+#   \$Env:PATH = "\$Env:PATH;$Bin"
+#
+# Using the GUI:
+# Start -> right click on "Computer" -> Properties -> (Advanced system settings)
+# -> Advanced -> Environment Variables... ->  System variables
+# -> select PATH -> Edit... -> append ";$Bin"
+EOT
+    }
+    else {
+        if (@_ and $_[0] eq '-') {
+            say <<EOT;
+export PATH="$Bin:\${PATH}"
 $brew_name() {
   local command
   command="\$1"
@@ -570,18 +680,19 @@ $brew_name() {
   esac
 }
 EOT
-    }
-    else {
+        }
+        else {
         say <<EOT;
 # Load $brew_name automatically by adding
-#   eval "\$($brew_name init -)"
+#   eval "\$($brew_exec init -)"
 # to your local profile file.
 # (often ~/.bash_profile or ~/.profile)
 # This can be easily done using:
 
-echo 'eval "\$($brew_name init -)"' >> ~/.profile
+echo 'eval "\$($brew_exec init -)"' >> ~/.profile
 
 EOT
+        }
     }
 }
 
@@ -589,7 +700,8 @@ sub get_shell_setter_code {
     my $version = shift;
 
     if ($^O =~ /win32/i) {
-        #TODO
+        #NYI on windows.
+        die;
     }
     else {
         if (check_version($version)) {
@@ -603,7 +715,8 @@ sub get_shell_setter_code {
 
 sub get_shell_unsetter_code {
     if ($^O =~ /win32/i) {
-        #TODO
+        #NYI on Windows.
+        die;
     }
     else {
         return "unset $env_var";
@@ -630,18 +743,18 @@ sub get_shell_version {
 }
 
 sub get_local_version {
-    my ($volume, $dir, undef) = splitpath(realpath(), 1);
-    my @fragments = splitdir($dir);
+    my ($vol, $path, undef) = splitpath(realpath(), 1);
+    my @fragments = splitdir($path);
     while (@fragments) {
-        my $path = catpath($volume, catdir(@fragments), $local_filename);
-        if (-f $path) {
-            my $version = trim(slurp($path));
+        my $filepath = catpath($vol, catdir(@fragments), $local_filename);
+        if (-f $filepath) {
+            my $version = trim(slurp($filepath));
             if(check_version($version)) {
                 return $version;
             }
             else {
                 say STDERR "Version '$version' is given in the";
-                say STDERR "$path";
+                say STDERR "$filepath";
                 say STDERR "file. This version is not installed. Ignoring.";
                 say STDERR '';
             }
@@ -659,6 +772,27 @@ sub set_local_version {
     else {
         say STDERR not_found($version);
     }
+}
+
+
+sub get_global_version {
+    if (-e catdir($prefix, 'CURRENT')) {
+        my $cur = slurp(catdir($prefix, 'CURRENT'));
+        chomp $cur;
+        return $cur;
+    }
+    else {
+        return undef;
+    }
+}
+
+sub set_global_version {
+    my $version = shift;
+    match_and_run($version, sub {
+        my $matched = shift;
+        say "Switching to $matched";
+        spurt(catfile($prefix, 'CURRENT'), $matched);
+    });
 }
 
 sub get_version {
@@ -704,20 +838,50 @@ sub which {
     }
 
     my $target; {
-        my @paths = get_bin_paths($version, $prog);
         if ($^O =~ /win32/i) {
-            # On Windows we have to add a .pl suffix (if not already there) to program filenames
-            # to make them work without having to call perl explicitly. Thus we strip that prefix
-            # when searching for the target.
-            my $prog_no_suffix = $prog;
-            if ($prog_no_suffix =~ s/\.pl$//) {
-                push @paths, get_bin_paths($version, $prog_no_suffix);
+            # The postfix of an executable on Windows is often unclear.
+            # Thus we look for files with a basename matching the given
+            # name.
+            my @results = ();
+            my @dirs = get_bin_paths($version);
+            for my $dir (@dirs) {
+                my @files = slurp_dir($dir);
+                for my $file (@files) {
+                    if(check_prog_name_match($prog, $file)) {
+                        push @results, catfile($dir, $file);
+                    }
+                }
             }
+            @results = sort {
+                # Prefer .exe > .bat > .pl6 > .pl > nothing > anything else
+                my (undef, undef, $suffix_a) = my_fileparse($a);
+                my (undef, undef, $suffix_b) = my_fileparse($b);
+                return -1        if $suffix_a eq '.exe' && $suffix_b ne '.exe';
+                return  1        if $suffix_a ne '.exe' && $suffix_b eq '.exe';
+                return $a cmp $b if $suffix_a eq '.exe' && $suffix_b eq '.exe';
+                return -1        if $suffix_a eq '.bat' && $suffix_b ne '.bat';
+                return  1        if $suffix_a ne '.bat' && $suffix_b eq '.bat';
+                return $a cmp $b if $suffix_a eq '.bat' && $suffix_b eq '.bat';
+                return -1        if $suffix_a eq '.pl6' && $suffix_b ne '.pl6';
+                return  1        if $suffix_a ne '.pl6' && $suffix_b eq '.pl6';
+                return $a cmp $b if $suffix_a eq '.pl6' && $suffix_b eq '.pl6';
+                return -1        if $suffix_a eq '.pl'  && $suffix_b ne '.pl';
+                return  1        if $suffix_a ne '.pl'  && $suffix_b eq '.pl';
+                return $a cmp $b if $suffix_a eq '.pl'  && $suffix_b eq '.pl';
+                return -1        if $suffix_a eq ''     && $suffix_b ne '';
+                return  1        if $suffix_a ne ''     && $suffix_b eq '';
+                return $a cmp $b if $suffix_a eq ''     && $suffix_b eq '';
+                return $a cmp $b;
+            } @results;
+            $target = $results[0];
         }
-        for my $path (@paths) {
-            if (-e $path) {
-                $target = $path;
-                last;
+        else {
+            my @paths = get_bin_paths($version, $prog);
+            for my $path (@paths) {
+                if (-e $path) {
+                    $target = $path;
+                    last;
+                }
             }
         }
     }
