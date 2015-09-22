@@ -167,8 +167,8 @@ if ($arg eq 'switch') {
         say <<EOT;
 To (un)set a version locally in this running shell session use the following commands:
 CMD:
-set PL6_VERSION="YOUR_VERSION"
-set PL6_VERSION=                # Unset. No trailing whitespace!
+SET PL6_VERSION=YOUR_VERSION
+SET PL6_VERSION=                # Unset. No trailing whitespace!
 
 PowerShell:
 \$Env:PL6_VERSION="YOUR_VERSION"
