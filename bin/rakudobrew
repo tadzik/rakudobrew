@@ -5,7 +5,7 @@ use 5.010;
 use Cwd qw(cwd realpath);
 use FindBin qw($Bin);
 use File::Path qw(remove_tree);
-use File::Basename qw(basename dirname);
+use File::Basename;
 use File::Spec::Functions qw(catfile catdir splitdir splitpath catpath updir);
 use Carp qw(croak);
 
