@@ -5,7 +5,7 @@ It's quick and dirty, may be broken on your system. Please report any breakages.
 Installing rakudobrew
 ---------------------
 
-On *nix do:
+On \*nix do:
 ```
 git clone https://github.com/tadzik/rakudobrew ~/.rakudobrew
 export PATH=~/.rakudobrew/bin:$PATH
@@ -29,11 +29,12 @@ rakudobrew init # Instructions for permanent installation.
 Windows specialities
 --------------------
 
-On Windows MSVC is required for compilation. It can be freely obtained from Microsoft:
-<https://www.microsoft.com/en-us/download/details.aspx?id=48159>
-After installation make sure you have the respective path added to your PATH environment variable.
-It's usually something like: `C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin`
-If you can run the command `nmake` directly from your terminal you have succeeded.
+If you want to use the Microsoft compiler `cl` you have to make sure the compiler is on
+your PATH and you have the environment variables `cl` requires set.
+This happens automatically when using the *Native Tools Command Prompt* but has to be done
+manually when using a normal terminal (or PowerShell). The script `vcvars32.bat` in the same
+folder as `cl` itself sets these variables up automatically. On PowerShell this requires
+some additional trickery as described on StackOverflow: <http://stackoverflow.com/q/6140864>
 
 It might be necessary to use an Administrative console to work
 around a problem with permissions that go wrong during the build process.
