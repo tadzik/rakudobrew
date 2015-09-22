@@ -219,6 +219,39 @@ EOT
     else {
         map {say $_} whence(@ARGV);
     }
+} elsif ($arg eq 'win-run') {
+    my $prog_name = shift;
+    my $path = which($prog_name);
+    # Do some filetype detection:
+    # - .exe/.bat/.cmd              -> return "filename"
+    # - .nqp                        -> return "nqp filename"
+    # - shebang line contains perl6 -> return "perl6 filename"
+    # - shebang line contains perl  -> return "perl filename"
+    # - nothing of the above        -> return "filename" # if we can't
+    #                                  figure out what to do with this
+    #                                  filename, let Windows have a try.
+    # The first line is potentially the shebang. Thus the search for "perl" and/or perl6.
+    my ($basename, undef, $suffix) = my_fileparse($prog_name);
+    if($suffix =~ /^\Q\.(exe|bat|cmd)\E\z/i) {
+        say $path;
+    }
+    elsif($suffix =~ /^\Q\.nqp\E\z/i) {
+        say which('nqp').' '.$path;
+    }
+    else {
+        open(my $fh, '<', $path);
+        my $first_line = <$fh>;
+        close($fh);
+        if($first_line =~ /#!.*perl6/) {
+            say which('perl6').' '.$path;
+        }
+        elsif($first_line =~ /#!.*perl/) {
+            say 'perl '.$path;
+        }
+        else {
+            say $path;
+        }
+    }
 } else {
     say "Usage:";
     say "$brew_name current";
@@ -477,20 +510,35 @@ sub trim {
     return $text;
 }
 
-sub rehash {
-    sub dir {
-        my $name = shift;
-        opendir(my $dh, $name) or return;
-        my @ret;
-        while (my $entry = readdir $dh) {
-            next if $entry =~ /^\./;
-            next if !-f catfile($name, $entry);
-            push @ret, $entry
-        }
-        closedir $dh;
-        return @ret;
-    }
+sub check_prog_name_match {
+    my ($prog, $filename) = @_;
+    my ($basename, undef, undef) = my_fileparse($filename);
+    return $prog =~ /^\Q$basename\E\z/i;
+}
 
+sub uniq {
+    my %seen;
+    return grep { !$seen{$_}++ } @_;
+}
+
+sub slurp_dir {
+    my $name = shift;
+    opendir(my $dh, $name) or return;
+    my @ret;
+    while (my $entry = readdir $dh) {
+        next if $entry =~ /^\./;
+        next if !-f catfile($name, $entry);
+        push @ret, $entry
+    }
+    closedir $dh;
+    return @ret;
+}
+
+sub my_fileparse {
+    return fileparse(shift, ('.dll.lib', qr/\.[^.]+/));
+}
+
+sub rehash {
     my @paths = ();
     for my $version (list()) {
         push @paths, get_bin_paths($version);
@@ -509,15 +557,31 @@ sub rehash {
         closedir $dh;
     }
 
-    my @bins = map { dir($_) } @paths;
+    my @bins = map { slurp_dir($_) } @paths;
 
-    for (@bins) {
-		if ($^O =~ /win32/i) {
-			spurt(catfile($prefix, 'bin', $_), '"perl" '.catfile($prefix, 'bin', $brew_name)." exec $_ \%*");
-		}
-		else {
-			link $0, catfile($prefix, 'bin', $_);
-		}
+    if ($^O =~ /win32/i) {
+        # This wrapper is needed because:
+        # - We want rakudobrew to work even when the .pl ending is not associated with the perl program and we do not want to put `perl` before every call to a shim.
+        # - exec() in perl on Windows behaves differently from running the target program directly (output ends up on the console differently).
+        # It retrieves the target executable (only consuming STDOUT of rakudobrew) and calls it with the given arguments. STDERR still ends up on the console. The return value is checked and if an error occurs that error values is returned.
+        @bins = map { my ($basename, undef, undef) = my_fileparse($_); $basename } @bins;
+        @bins = uniq(@bins);
+        for (@bins) {
+            spurt(catfile($prefix, 'bin', $_.'.bat'), <<EOT);
+\@ECHO OFF
+SETLOCAL
+SET brew_cmd=perl \%~dp0$brew_name win-run \%~n0
+FOR /F "delims=" \%\%i IN ('\%brew_cmd\%') DO SET command=\%\%i
+IF NOT ERRORLEVEL 0 EXIT /B \%errorlevel\%
+IF     ERRORLEVEL 1 EXIT /B \%errorlevel\%
+\%command\% \%*
+EOT
+        }
+    }
+    else {
+        for (@bins) {
+            link $0, catfile($prefix, 'bin', $_);
+        }
     }
 }
 
@@ -774,20 +838,50 @@ sub which {
     }
 
     my $target; {
-        my @paths = get_bin_paths($version, $prog);
         if ($^O =~ /win32/i) {
-            # On Windows we have to add a .pl suffix (if not already there) to program filenames
-            # to make them work without having to call perl explicitly. Thus we strip that prefix
-            # when searching for the target.
-            my $prog_no_suffix = $prog;
-            if ($prog_no_suffix =~ s/\.pl$//) {
-                push @paths, get_bin_paths($version, $prog_no_suffix);
+            # The postfix of an executable on Windows is often unclear.
+            # Thus we look for files with a basename matching the given
+            # name.
+            my @results = ();
+            my @dirs = get_bin_paths($version);
+            for my $dir (@dirs) {
+                my @files = slurp_dir($dir);
+                for my $file (@files) {
+                    if(check_prog_name_match($prog, $file)) {
+                        push @results, catfile($dir, $file);
+                    }
+                }
             }
+            @results = sort {
+                # Prefer .exe > .bat > .pl6 > .pl > nothing > anything else
+                my (undef, undef, $suffix_a) = my_fileparse($a);
+                my (undef, undef, $suffix_b) = my_fileparse($b);
+                return -1        if $suffix_a eq '.exe' && $suffix_b ne '.exe';
+                return  1        if $suffix_a ne '.exe' && $suffix_b eq '.exe';
+                return $a cmp $b if $suffix_a eq '.exe' && $suffix_b eq '.exe';
+                return -1        if $suffix_a eq '.bat' && $suffix_b ne '.bat';
+                return  1        if $suffix_a ne '.bat' && $suffix_b eq '.bat';
+                return $a cmp $b if $suffix_a eq '.bat' && $suffix_b eq '.bat';
+                return -1        if $suffix_a eq '.pl6' && $suffix_b ne '.pl6';
+                return  1        if $suffix_a ne '.pl6' && $suffix_b eq '.pl6';
+                return $a cmp $b if $suffix_a eq '.pl6' && $suffix_b eq '.pl6';
+                return -1        if $suffix_a eq '.pl'  && $suffix_b ne '.pl';
+                return  1        if $suffix_a ne '.pl'  && $suffix_b eq '.pl';
+                return $a cmp $b if $suffix_a eq '.pl'  && $suffix_b eq '.pl';
+                return -1        if $suffix_a eq ''     && $suffix_b ne '';
+                return  1        if $suffix_a ne ''     && $suffix_b eq '';
+                return $a cmp $b if $suffix_a eq ''     && $suffix_b eq '';
+                return $a cmp $b;
+            } @results;
+            $target = $results[0];
         }
-        for my $path (@paths) {
-            if (-e $path) {
-                $target = $path;
-                last;
+        else {
+            my @paths = get_bin_paths($version, $prog);
+            for my $path (@paths) {
+                if (-e $path) {
+                    $target = $path;
+                    last;
+                }
             }
         }
     }
