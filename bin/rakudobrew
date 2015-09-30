@@ -541,7 +541,7 @@ sub my_fileparse {
 sub rehash {
     my @paths = ();
     for my $version (list()) {
-        push @paths, get_bin_paths($version);
+        append @paths, get_bin_paths($version);
     }
 
     say "Updating shims";
