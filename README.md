@@ -8,8 +8,8 @@ Installing rakudobrew
 On \*nix do:
 ```
 git clone https://github.com/tadzik/rakudobrew ~/.rakudobrew
-export PATH=~/.rakudobrew/bin:$PATH 
-# or fish shell: set -U fish_user_paths ~/.rakudobrew/bin/ $fish_user_paths  
+export PATH=~/.rakudobrew/bin:$PATH
+# or fish shell: set -U fish_user_paths ~/.rakudobrew/bin/ $fish_user_paths
 rakudobrew init # Instructions for permanent installation.
 ```
 
