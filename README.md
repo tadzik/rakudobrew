@@ -1,6 +1,6 @@
 Put this in `~/.rakudobrew`, and add aliases for convenience.
 
-It's quick and dirty, may be broken on your system. Please report any breakages.
+It's quick and dirty, and may be broken on your system. Please report any breakages.
 
 Installing rakudobrew
 ---------------------
