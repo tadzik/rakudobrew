@@ -58,7 +58,7 @@ which should then be available as `perl6`.
 $ rakudobrew build-panda
 ```
 
-  - Or use [zef](https://github.com/ugexe/zef) (Perl 6 Management Tool),
+  - Or use [zef](https://github.com/ugexe/zef) (a Perl 6 Management Tool),
 do:
   ```
 $ rakudobrew build-zef
