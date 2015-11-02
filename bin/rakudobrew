@@ -120,8 +120,7 @@ if ($arg eq 'switch') {
     build_panda($panda_ver);
     rehash();
 } elsif ($arg eq 'build-zef') {
-    my $zef_ver = shift;
-    build_zef($zef_ver);
+    build_zef();
     rehash();
 } elsif ($arg eq 'self-upgrade') {
     self_upgrade();
@@ -263,7 +262,7 @@ EOT
     say "$brew_name list-available";
     say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
     say "$brew_name build-panda [panda-ver]";
-    say "$brew_name build-zef [zef-ver]";
+    say "$brew_name build-zef";
     say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "$brew_name rehash";
     say "$brew_name switch ", (join "|", available_backends());
@@ -506,8 +505,7 @@ sub build_panda {
 }
 
 sub build_zef {
-    my ($zef_ver, $version) = @_;
-    $zef_ver //= 'HEAD';
+    my ($version) = @_;
     $version //= get_version();
     if (!$version) {
         say STDERR "$brew_name: No version set.";
@@ -519,7 +517,7 @@ sub build_zef {
     }
     chdir 'zef';
     run "$GIT pull -q";
-    run "$GIT checkout -q $zef_ver";
+    run "$GIT checkout";
     run which('perl6', $version) . " -Ilib bin/zef -v install .";
     # Might have new executables now -> rehash.
     rehash();
