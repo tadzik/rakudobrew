@@ -30,11 +30,13 @@ rakudobrew init # Instructions for permanent installation.
 
 ## Windows notes
 
-If you want to use the Microsoft compiler `cl` you have to make sure the compiler is on
-your PATH and you have the environment variables `cl` requires set.
+If you want to use the Microsoft compiler `cl`, you have to make sure the compiler is on
+your `PATH` and you have the environment variables `cl` requires set.
 This happens automatically when using the *Native Tools Command Prompt* but has to be done
-manually when using a normal terminal (or PowerShell). The script `vcvars32.bat` in the same
-folder as `cl` itself sets these variables up automatically. On PowerShell this requires
+manually when using a normal terminal (or PowerShell). The script `vcvars32.bat` (which is in the same
+folder as `cl`) can set these variables up automatically for you.
+
+On PowerShell this requires
 some additional trickery as described on StackOverflow: <http://stackoverflow.com/q/6140864>
 
 It might be necessary to use an Administrative console to work
