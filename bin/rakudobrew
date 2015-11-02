@@ -29,6 +29,7 @@ my %git_repos = (
     MoarVM => "$GIT_PROTO://github.com/MoarVM/MoarVM.git",
     nqp    => "$GIT_PROTO://github.com/perl6/nqp.git",
     panda  => "$GIT_PROTO://github.com/tadzik/panda.git",
+    zef    => "$GIT_PROTO://github.com/ugexe/zef.git",
 );
 
 my %impls = (
@@ -119,8 +120,8 @@ if ($arg eq 'switch') {
     build_panda($panda_ver);
     rehash();
 } elsif ($arg eq 'build-zef') {
-    my $panda_ver = shift;
-    build_panda($panda_ver);
+    my $zef_ver = shift;
+    build_zef($zef_ver);
     rehash();
 } elsif ($arg eq 'self-upgrade') {
     self_upgrade();
@@ -262,6 +263,7 @@ EOT
     say "$brew_name list-available";
     say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
     say "$brew_name build-panda [panda-ver]";
+    say "$brew_name build-zef [zef-ver]";
     say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "$brew_name rehash";
     say "$brew_name switch ", (join "|", available_backends());
@@ -290,7 +292,7 @@ sub available_rakudos {
 sub list {
     opendir(my $dh, $prefix);
     grep {/^[^.]/ && -d catdir($prefix, $_)
-          && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'panda'} readdir($dh);
+          && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'panda' && $_ ne 'zef' } readdir($dh);
 }
 
 sub nuke {
@@ -347,6 +349,9 @@ sub build_impl {
     if ($impl eq "panda") {
         build_panda();
         return;
+    } elsif ($impl eq "zef") {
+        build_zef();
+        return;
     }
     unless (exists $impls{$impl}) {
         say "Building Rakudo with backend '$impl' is NYI. Well volunteered!";
@@ -375,7 +380,11 @@ sub build_impl {
     if (-d 'panda') {
         say "Updating panda as well";
         build_panda(undef, "$impl-$ver");
+    } elsif (-d 'zef') {
+        say "Updating zef as well";
+        build_zef(undef, "$impl-$ver");
     }
+
     # Might have new executables now -> rehash.
     rehash();
     unless (get_version()) {
@@ -462,7 +471,11 @@ sub build_triple {
     if (-d 'panda') {
         say "Updating panda as well";
         build_panda(undef, $name);
+    } elsif (-d 'zef') {
+        say "Updating zef as well";
+        build_zef(undef, $name);
     }
+
     # Might have new executables now -> rehash.
     rehash();
     unless (get_version()) {
@@ -490,6 +503,27 @@ sub build_panda {
     # Might have new executables now -> rehash.
     rehash();
     say "Done, built panda for $version";
+}
+
+sub build_zef {
+    my ($zef_ver, $version) = @_;
+    $zef_ver //= 'HEAD';
+    $version //= get_version();
+    if (!$version) {
+        say STDERR "$brew_name: No version set.";
+        exit 1;
+    }
+    chdir catdir($prefix, $version);
+    unless (-d 'zef') {
+        run "$GIT clone $git_repos{zef}";
+    }
+    chdir 'zef';
+    run "$GIT pull -q";
+    run "$GIT checkout -q $zef_ver";
+    run which('perl6', $version) . " -Ilib bin/zef -v install .";
+    # Might have new executables now -> rehash.
+    rehash();
+    say "Done, built zef for $version";
 }
 
 sub slurp {
