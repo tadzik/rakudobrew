@@ -118,6 +118,10 @@ if ($arg eq 'switch') {
     my $panda_ver = shift;
     build_panda($panda_ver);
     rehash();
+} elsif ($arg eq 'build-zef') {
+    my $panda_ver = shift;
+    build_panda($panda_ver);
+    rehash();
 } elsif ($arg eq 'self-upgrade') {
     self_upgrade();
 } elsif ($arg eq 'test') {
