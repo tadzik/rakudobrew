@@ -496,6 +496,7 @@ sub build_panda {
         run "$GIT clone $git_repos{panda}";
     }
     chdir 'panda';
+    run "$GIT checkout master";
     run "$GIT pull -q";
     run "$GIT checkout -q $panda_ver";
     run which('perl6', $version) . " rebootstrap.pl";
