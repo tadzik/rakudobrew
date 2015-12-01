@@ -498,7 +498,7 @@ sub build_panda {
     chdir 'panda';
     run "$GIT pull -q";
     run "$GIT checkout -q $panda_ver";
-    run which('perl6', $version) . " rebootstrap.pl";
+    run which('perl6', $version) . " bootstrap.pl";
     # Might have new executables now -> rehash.
     rehash();
     say "Done, built panda for $version";
