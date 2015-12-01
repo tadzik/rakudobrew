@@ -68,6 +68,7 @@ sub run {
 }
 
 my $arg = shift // 'help';
+my $configure_opts;
 if ($arg eq 'switch') {
     my $version = shift;
     set_global_version($version);
@@ -98,7 +99,7 @@ if ($arg eq 'switch') {
     my $impl = shift;
     my $ver = shift
         if @ARGV && $ARGV[0] !~ /^--/;
-    my $configure_opts = '';
+    $configure_opts = '';
     if (@ARGV && $ARGV[0] =~ /^--configure-opts=/) {
         $configure_opts = shift;
         $configure_opts =~ s/^\-\-configure-opts=//;
@@ -118,7 +119,7 @@ if ($arg eq 'switch') {
     $nqp_ver = shift if ($ARGV[0] !~ m/^\-\-/);
     $moar_ver = shift if ($ARGV[0] !~ m/^\-\-/);
 
-    my $configure_opts = '';
+    $configure_opts = '';
     if (@ARGV && $ARGV[0] =~ /^\-\-configure\-opts\=/) {
         $configure_opts = shift;
         $configure_opts =~ s/^\-\-configure\-opts\=//;
@@ -269,25 +270,12 @@ EOT
     }
 } else {
     say "Usage:";
-<<<<<<< HEAD
-    say "rakudobrew current";
-    say "rakudobrew list";
-    say "rakudobrew list-available";
-    say "rakudobrew build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
-    say "rakudobrew build-panda [panda-ver]";
-    say "rakudobrew triple [rakudo-ver [nqp-ver [moar-ver]]] [--configure-opts=]";
-    say "rakudobrew rehash";
-    say "rakudobrew switch ", (join "|", available_backends());
-    say "rakudobrew nuke ", (join "|", available_backends());
-    say "rakudobrew self-upgrade";
-    say "rakudobrew test [", (join "|", available_backends(), "all"), "]";
-=======
     say "$brew_name current";
     say "$brew_name list-available";
     say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
     say "$brew_name build-panda [panda-ver]";
     say "$brew_name build-zef";
-    say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
+    say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]] [--configure-opts=]";
     say "$brew_name rehash";
     say "$brew_name switch ", (join "|", available_backends());
     say "$brew_name nuke ", (join "|", available_backends());
@@ -302,7 +290,6 @@ EOT
     say "$brew_name versions # or $brew_name list";
     say "$brew_name which <command>";
     say "$brew_name whence [--path] <command>";
->>>>>>> a1beebb3c7c201cd85a8dee07b4b41508244b1dd
 }
 
 exit;
@@ -529,28 +516,14 @@ sub build_triple {
     chdir "MoarVM";
     run "$GIT pull";
     run "$GIT checkout $moar_ver";
-<<<<<<< HEAD
     run "$PERL5 Configure.pl $moar_opts";
-    run "make install";
-
-    chdir "..";
-    run "$PERL5 Configure.pl --backend=moar $nqp_opts";
-    run "make install";
-
-    chdir "..";
-    run "$PERL5 Configure.pl --backend=moar $rakudo_opts";
-=======
-    run "$PERL5 Configure.pl --prefix=" . catdir(updir(), updir(), 'install');
     make('install');
 
     chdir updir();
-    run "$PERL5 Configure.pl --backend=moar --prefix=" . catdir(updir(), 'install');
-    make('install');
+    run "$PERL5 Configure.pl --backend=moar --make-install $nqp_opts";
 
     chdir updir();
-    run "$PERL5 Configure.pl --backend=moar";
-    make('install');
->>>>>>> a1beebb3c7c201cd85a8dee07b4b41508244b1dd
+    run "$PERL5 Configure.pl --backend=moar --make-install $rakudo_opts";
 
     if (-d 'panda') {
         say "Updating panda as well";
@@ -583,6 +556,7 @@ sub build_panda {
     chdir 'panda';
     run "$GIT pull -q";
     run "$GIT checkout -q $panda_ver";
+    say which('perl6', $version) . " rebootstrap.pl";
     run which('perl6', $version) . " rebootstrap.pl";
     # Might have new executables now -> rehash.
     rehash();
@@ -753,7 +727,12 @@ sub check_version {
 sub get_bin_paths {
     my $version = shift;
     my $program = scalar(shift) || undef;
+
+    $configure_opts =~ m/\-\-prefix\=(\S+)/;
+
     return (
+        catfile($1, 'bin', $program // ()),
+        catfile($1, 'bin', 'share', 'perl6', 'site', 'bin', $program // ()),
         catfile($prefix, $version, 'install', 'bin', $program // ()),
         catfile($prefix, $version, 'install', 'share', 'perl6', 'site', 'bin', $program // ()),
     );
