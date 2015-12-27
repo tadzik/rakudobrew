@@ -1,9 +1,10 @@
 #!/usr/bin/env perl
+# I AM RAKUDOBREW. ALSO POSSIBLY SPARTACUS. OUTLOOK CLOUDY, ASK AGAIN LATER.
 use strict;
 use warnings;
 use 5.010;
 use Cwd qw(cwd realpath);
-use FindBin qw($Bin);
+use FindBin qw($RealBin);
 use File::Path qw(remove_tree);
 use File::Basename;
 use File::Spec::Functions qw(catfile catdir splitdir splitpath catpath updir);
@@ -13,7 +14,7 @@ my $brew_name = 'rakudobrew';
 my $env_var = 'PL6ENV_VERSION';
 my $local_filename = '.perl6-version';
 
-my $prefix = catdir($Bin, updir());
+my $prefix = catdir($RealBin, updir());
 my $git_reference = catfile($prefix, 'git_reference');
 
 unless (-d $git_reference) {
@@ -589,6 +590,17 @@ sub rehash {
             next if $entry =~ /^\./;
             next if $entry =~ /$brew_name/;
             next if $entry =~ /$brew_name\.bat/;
+            next unless open my $check_fh, '<', catfile($prefix, 'bin', $entry);
+            my $is_shim;
+            LINE: while (my $line = <$check_fh>) {
+                if ($line =~ # detect self by sensible and fallback approaches
+                    /I AM RAKUDOBREW|my \$brew_name = 'rakudobrew';/
+                ) {
+                    $is_shim = 1;
+                    last LINE;
+                }
+            }
+            next unless $is_shim;
             unlink catfile($prefix, 'bin', $entry);
         }
         closedir $dh;
@@ -676,32 +688,32 @@ sub get_bin_paths {
 }
 
 sub init {
-    my $brew_exec = catfile($Bin, $brew_name);
+    my $brew_exec = catfile($RealBin, $brew_name);
     if ($^O =~ /win32/i) {
         say <<EOT;
 # CMD:
 # To install $brew_name permanently type the following into your terminal:
-#   SETX PATH "%PATH%;$Bin"
+#   SETX PATH "%PATH%;$RealBin"
 # To make use of $brew_name in this session only use
-#   SET PATH=%PATH%;$Bin
+#   SET PATH=%PATH%;$RealBin
 #
 # PowerShell:
 # To install $brew_name permanently type the following into your terminal
 # (only works with an administrative console window):
-#   [Environment]::SetEnvironmentVariable("PATH", "\$Env:PATH;$Bin", "User")
+#   [Environment]::SetEnvironmentVariable("PATH", "\$Env:PATH;$RealBin", "User")
 # To make use of $brew_name in this session only use
-#   \$Env:PATH = "\$Env:PATH;$Bin"
+#   \$Env:PATH = "\$Env:PATH;$RealBin"
 #
 # Using the GUI:
 # Start -> right click on "Computer" -> Properties -> (Advanced system settings)
 # -> Advanced -> Environment Variables... ->  System variables
-# -> select PATH -> Edit... -> append ";$Bin"
+# -> select PATH -> Edit... -> append ";$RealBin"
 EOT
     }
     else {
         if (@_ and $_[0] eq '-') {
             say <<EOT;
-export PATH="$Bin:\${PATH}"
+export PATH="$RealBin:\${PATH}"
 $brew_name() {
   local command
   command="\$1"
