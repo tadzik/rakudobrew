@@ -100,7 +100,7 @@ if ($arg eq 'switch') {
     my $ver = shift
         if @ARGV && $ARGV[0] !~ /^--/;
 
-	$ver = last_release() if $arg eq 'build-release';
+    $ver = last_release() if $arg eq 'build-release';
 
     my $configure_opts = '';
     if (@ARGV && $ARGV[0] =~ /^--configure-opts=/) {
