@@ -95,10 +95,13 @@ if ($arg eq 'switch') {
     } else {
         say "Not running anything at the moment. Use '$brew_name switch' to set a version";
     }
-} elsif ($arg eq 'build') {
+} elsif ($arg eq 'build' or $arg eq 'build-release') {
     my $impl = shift;
     my $ver = shift
         if @ARGV && $ARGV[0] !~ /^--/;
+
+    $ver = last_release() if $arg eq 'build-release';
+
     my $configure_opts = '';
     if (@ARGV && $ARGV[0] =~ /^--configure-opts=/) {
         $configure_opts = shift;
@@ -263,6 +266,7 @@ EOT
     say "$brew_name list-available";
     say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
     say "$brew_name build-panda [panda-ver]";
+    say "$brew_name build-release ",(join "|", available_backends(), "all"), " [--configure-opts=] (not Windows)";
     say "$brew_name build-zef";
     say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "$brew_name rehash";
@@ -287,6 +291,13 @@ sub available_rakudos {
     my @output = qx|$GIT ls-remote --tags $git_repos{rakudo}|;
     my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
     return map(m{tags/([^\^]+)\^}, @tags );
+}
+
+sub last_release {
+    die "build-release NYI on Windows" if $^O =~ /win32/i;
+    my $ver = qx|git clone --no-checkout --depth 1 git\@github.com:rakudo/rakudo.git /tmp/$$ 2>&1 >& /dev/null && cd /tmp/$$ && git show nom:VERSION && rm -rf /tmp/$$|;
+    chomp $ver;
+    return $ver;
 }
 
 sub list {
