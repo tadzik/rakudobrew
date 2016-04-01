@@ -347,7 +347,7 @@ sub build_impl {
         return;
     }
     if ($impl eq "panda") {
-        build_panda();
+        build_panda($ver, $ver);
         return;
     } elsif ($impl eq "zef") {
         build_zef();
@@ -486,7 +486,6 @@ sub build_triple {
 
 sub build_panda {
     my ($panda_ver, $version) = @_;
-    $panda_ver //= 'HEAD';
     $version //= get_version();
     if (!$version) {
         say STDERR "$brew_name: No version set.";
@@ -499,11 +498,29 @@ sub build_panda {
     chdir 'panda';
     run "$GIT checkout master";
     run "$GIT pull -q";
-    run "$GIT checkout -q $panda_ver";
+
+    if (defined $panda_ver) {
+        run "$GIT checkout -q $panda_ver";
+    }
+    else {
+        # try to match panda's version to the current rakudo
+        $panda_ver = $version;
+        # moar-nom => nom, jvm-2016.01 => 2016.01, etc:
+        foreach my $backend_prefix (keys %impls) {
+            last if $panda_ver =~ s{$backend_prefix\-}{};
+        }
+        eval { run "$GIT checkout -q $panda_ver" };
+        if ($@) {
+            say "panda for $panda_ver not found";
+            say "Installing latest panda instead.";
+            $panda_ver = 'HEAD';
+            run "$GIT checkout -q $panda_ver";
+        }
+    }
     run which('perl6', $version) . " bootstrap.pl";
     # Might have new executables now -> rehash.
     rehash();
-    say "Done, built panda for $version";
+    say "Done, built panda $panda_ver for $version";
 }
 
 sub build_zef {
