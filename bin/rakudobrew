@@ -88,6 +88,8 @@ if ($arg eq 'switch') {
     map { say $cur eq $_ ? "* $_" : "  $_" } sort { $a cmp $b } list();
 } elsif ($arg eq 'list-available') {
     my ($cur_backend, $cur_rakudo) = split '-', (get_version() // ''), 2;
+    $cur_backend //= '';
+    $cur_rakudo  //= '';
     say "Available Rakudo versions:";
     map { say $cur_rakudo eq $_ ? "* $_" : "  $_" } available_rakudos();
     say "";
