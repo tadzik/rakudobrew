@@ -47,7 +47,7 @@ my %impls = (
         need_repo => ['rakudo', 'nqp', 'MoarVM'],
     },
     'moar-blead' => {
-        name      => "moar",
+        name      => "moar-blead",
         weight    => 35,
         configure => "$PERL5 Configure.pl --backends=moar --gen-moar=master --gen-nqp=master --git-reference=$git_reference --make-install",
         need_repo => ['rakudo', 'nqp', 'MoarVM'],
