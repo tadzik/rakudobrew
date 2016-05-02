@@ -30,6 +30,10 @@ rakudobrew init # Instructions for permanent installation.
 
 ## Windows notes
 
+Rakudobrew requires Perl 5 and git to be installed. You can download and install these from
+* http://strawberryperl.com/
+* https://www.git-scm.com/downloads
+
 If you want to use the Microsoft compiler `cl`, you have to make sure the compiler is on
 your `PATH` and you have the environment variables `cl` requires set.
 This happens automatically when using the *Native Tools Command Prompt* but has to be done
