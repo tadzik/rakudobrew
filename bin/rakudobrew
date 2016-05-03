@@ -362,7 +362,13 @@ sub build_impl {
         return;
     }
     unless (exists $impls{$impl}) {
-        say "Building Rakudo with backend '$impl' is NYI. Well volunteered!";
+        my $warning = "Cannot build Rakudo with backend '$impl': this backend ";
+        if ($impl eq "parrot") {
+            $warning .= "is no longer supported.";
+        } else {
+            $warning .= "does not exist.";
+        }
+        say $warning;
         return;
     }
     $ver //= 'nom';
