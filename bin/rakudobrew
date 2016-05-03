@@ -54,7 +54,7 @@ my %impls = (
     },
     'pre-glr' => {
         name      => "pre-glr",
-        weight    => 30,
+        weight    => 15,
         configure => "git checkout pre-glr; git pull; $PERL5 Configure.pl --backends=moar --gen-moar --git-reference=$git_reference --make-install",
         need_repo => ['rakudo', 'nqp', 'MoarVM'],
     },
