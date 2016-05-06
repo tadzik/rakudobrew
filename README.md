@@ -96,6 +96,19 @@ to the git binary using a `GIT_BINARY` environment variable:
 $ GIT_BINARY="%USERPROFILE%\Local Settings\Application Data\GitHub\PORTAB~1\bin\git.exe" rakudobrew build all
 ```
 
+## Specifying a git protocol
+
+By default, rakudobrew will use the git protocol when it clones repositories.
+To override this setting, use the `GIT_PROTOCOL` environment variable.
+
+```
+$ GIT_PROTOCOL=ssh rakudobrew list-available
+# uses git@github.com:/rakudo/rakudo.git
+
+$ GIT_PROTOCOL=https rakudobrew list-available
+# uses https://github.com/rakudo/rakudo.git
+```
+
 ## Command-line switches
 
 Run `rakudobrew`

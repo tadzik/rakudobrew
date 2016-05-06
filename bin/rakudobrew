@@ -26,11 +26,11 @@ my $GIT_PROTO = $ENV{GIT_PROTOCOL} // 'git';
 my $PERL5     = $^X;
 
 my %git_repos = (
-    rakudo => "$GIT_PROTO://github.com/rakudo/rakudo.git",
-    MoarVM => "$GIT_PROTO://github.com/MoarVM/MoarVM.git",
-    nqp    => "$GIT_PROTO://github.com/perl6/nqp.git",
-    panda  => "$GIT_PROTO://github.com/tadzik/panda.git",
-    zef    => "$GIT_PROTO://github.com/ugexe/zef.git",
+    rakudo => get_git_url($GIT_PROTO, 'github.com', 'rakudo', 'rakudo'),
+    MoarVM => get_git_url($GIT_PROTO, 'github.com', 'MoarVM', 'MoarVM'),
+    nqp    => get_git_url($GIT_PROTO, 'github.com', 'perl6',  'nqp'),
+    panda  => get_git_url($GIT_PROTO, 'github.com', 'tadzik', 'panda'),
+    zef    => get_git_url($GIT_PROTO, 'github.com', 'ugexe',  'zef'),
 );
 
 my %impls = (
@@ -983,4 +983,13 @@ sub do_exec {
     # Run.
     exec { $target } ($target, @$args);
     die "Executing $target failed with: $!";
+}
+
+sub get_git_url {
+    my ($protocol, $host, $user, $project) = @_;
+    if ($protocol eq "ssh") {
+        return "git\@${host}:${user}/${project}.git";
+    } else {
+        return "${protocol}://${host}/${user}/${project}.git";
+    }
 }
