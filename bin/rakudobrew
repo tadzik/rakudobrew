@@ -37,19 +37,19 @@ my %impls = (
     jvm => {
         name      => "jvm",
         weight    => 20,
-        configure => "$PERL5 Configure.pl --backends=jvm --gen-nqp --git-reference=$git_reference --make-install",
+        configure => "$PERL5 Configure.pl --backends=jvm --gen-nqp --git-reference=\"$git_reference\" --make-install",
         need_repo => ['rakudo', 'nqp'],
     },
     moar => {
         name      => "moar",
         weight    => 30,
-        configure => "$PERL5 Configure.pl --backends=moar --gen-moar --git-reference=$git_reference --make-install",
+        configure => "$PERL5 Configure.pl --backends=moar --gen-moar --git-reference=\"$git_reference\" --make-install",
         need_repo => ['rakudo', 'nqp', 'MoarVM'],
     },
     'moar-blead' => {
         name      => "moar-blead",
         weight    => 35,
-        configure => "$PERL5 Configure.pl --backends=moar --gen-moar=master --gen-nqp=master --git-reference=$git_reference --make-install",
+        configure => "$PERL5 Configure.pl --backends=moar --gen-moar=master --gen-nqp=master --git-reference=\"$git_reference\" --make-install",
         need_repo => ['rakudo', 'nqp', 'MoarVM'],
     },
 );
@@ -371,7 +371,7 @@ sub build_impl {
         for(@{$impls{$impl}{need_repo}}) {
             update_git_reference($_);
         }
-        run "$GIT clone --reference $git_reference/rakudo $git_repos{rakudo} $impl-$ver";
+        run "$GIT clone --reference \"$git_reference/rakudo\" $git_repos{rakudo} $impl-$ver";
     }
     chdir "$impl-$ver";
     run "$GIT fetch";
@@ -441,7 +441,7 @@ sub build_triple {
     my $name = "$impl-$rakudo_ver-$nqp_ver-$moar_ver";
     unless (-d $name) {
         update_git_reference('rakudo');
-        run "$GIT clone --reference $git_reference/rakudo $git_repos{rakudo} $name";
+        run "$GIT clone --reference \"$git_reference/rakudo\" $git_repos{rakudo} $name";
     }
     chdir $name;
     run "$GIT pull";
@@ -452,7 +452,7 @@ sub build_triple {
 
     unless (-d "nqp") {
         update_git_reference('nqp');
-        run "$GIT clone --reference $git_reference/nqp $git_repos{nqp}";
+        run "$GIT clone --reference \"$git_reference/nqp\" $git_repos{nqp}";
     }
     chdir "nqp";
     run "$GIT pull";
@@ -460,7 +460,7 @@ sub build_triple {
 
     unless (-d "MoarVM") {
         update_git_reference('MoarVM');
-        run "$GIT clone --reference $git_reference/MoarVM $git_repos{MoarVM}";
+        run "$GIT clone --reference \"$git_reference/MoarVM\" $git_repos{MoarVM}";
     }
     chdir "MoarVM";
     run "$GIT pull";
