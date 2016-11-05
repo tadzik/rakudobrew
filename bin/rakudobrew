@@ -388,9 +388,6 @@ sub build_impl {
     if (-d 'panda') {
         say "Updating panda as well";
         build_panda(undef, "$impl-$ver");
-    } elsif (-d 'zef') {
-        say "Updating zef as well";
-        build_zef(undef, "$impl-$ver");
     }
 
     # Might have new executables now -> rehash.
