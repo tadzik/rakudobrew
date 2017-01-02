@@ -545,7 +545,8 @@ sub build_zef {
     chdir 'zef';
     run "$GIT pull -q";
     run "$GIT checkout";
-    run which('perl6', $version) . " -Ilib bin/zef -v install .";
+    run which('perl6', $version) . " -Ilib bin/zef test .";
+    run which('perl6', $version) . " -Ilib bin/zef --/test --force install .";
     # Might have new executables now -> rehash.
     rehash();
     say "Done, built zef for $version";
