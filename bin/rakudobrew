@@ -29,7 +29,6 @@ my %git_repos = (
     rakudo => get_git_url($GIT_PROTO, 'github.com', 'rakudo', 'rakudo'),
     MoarVM => get_git_url($GIT_PROTO, 'github.com', 'MoarVM', 'MoarVM'),
     nqp    => get_git_url($GIT_PROTO, 'github.com', 'perl6',  'nqp'),
-    panda  => get_git_url($GIT_PROTO, 'github.com', 'tadzik', 'panda'),
     zef    => get_git_url($GIT_PROTO, 'github.com', 'ugexe',  'zef'),
 );
 
@@ -119,9 +118,7 @@ if ($arg eq 'switch') {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
     build_triple($rakudo_ver, $nqp_ver, $moar_ver);
 } elsif ($arg eq 'build-panda') {
-    my $panda_ver = shift;
-    build_panda($panda_ver);
-    rehash();
+    say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
 } elsif ($arg eq 'build-zef') {
     build_zef();
     rehash();
@@ -264,7 +261,6 @@ EOT
     say "$brew_name current";
     say "$brew_name list-available";
     say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
-    say "$brew_name build panda [panda-ver]";
     say "$brew_name build zef";
     say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "$brew_name rehash";
@@ -294,7 +290,7 @@ sub available_rakudos {
 sub list {
     opendir(my $dh, $prefix);
     grep {/^[^.]/ && -d catdir($prefix, $_)
-          && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'panda' && $_ ne 'zef' } readdir($dh);
+          && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'zef' } readdir($dh);
 }
 
 sub nuke {
@@ -349,7 +345,7 @@ sub build_impl {
         return;
     }
     if ($impl eq "panda") {
-        build_panda($ver, $ver);
+        say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
         return;
     } elsif ($impl eq "zef") {
         build_zef();
@@ -385,10 +381,7 @@ sub build_impl {
 
     run $impls{$impl}{configure} . " $configure_opts";
 
-    if (-d 'panda') {
-        say "Updating panda as well";
-        build_panda(undef, "$impl-$ver");
-    } elsif (-d 'zef') {
+    if (-d 'zef') {
         say "Updating zef as well";
         build_zef(undef, "$impl-$ver");
     }
@@ -476,10 +469,7 @@ sub build_triple {
     run "$PERL5 Configure.pl --backend=moar";
     make('install');
 
-    if (-d 'panda') {
-        say "Updating panda as well";
-        build_panda(undef, $name);
-    } elsif (-d 'zef') {
+    if (-d 'zef') {
         say "Updating zef as well";
         build_zef(undef, $name);
     }
@@ -490,45 +480,6 @@ sub build_triple {
         set_global_version($name);
     }
     say "Done, $name built";
-}
-
-sub build_panda {
-    my ($panda_ver, $version) = @_;
-    $version //= get_version();
-    if (!$version) {
-        say STDERR "$brew_name: No version set.";
-        exit 1;
-    }
-    chdir catdir($prefix, $version);
-    unless (-d 'panda') {
-        run "$GIT clone $git_repos{panda}";
-    }
-    chdir 'panda';
-    run "$GIT checkout master";
-    run "$GIT pull -q";
-
-    if (defined $panda_ver) {
-        run "$GIT checkout -q $panda_ver";
-    }
-    else {
-        # try to match panda's version to the current rakudo
-        $panda_ver = $version;
-        # moar-nom => nom, jvm-2016.01 => 2016.01, etc:
-        foreach my $backend_prefix (keys %impls) {
-            last if $panda_ver =~ s{$backend_prefix\-}{};
-        }
-        eval { run "$GIT checkout -q $panda_ver" };
-        if ($@) {
-            say "panda for $panda_ver not found";
-            say "Installing latest panda instead.";
-            $panda_ver = 'HEAD';
-            run "$GIT checkout -q $panda_ver";
-        }
-    }
-    run which('perl6', $version) . " bootstrap.pl";
-    # Might have new executables now -> rehash.
-    rehash();
-    say "Done, built panda $panda_ver for $version";
 }
 
 sub build_zef {
