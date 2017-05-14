@@ -49,7 +49,8 @@ around a problem with permissions that go wrong during the build process.
 ## Bootstrapping a Perl 6 implementation
 
 - Run something like:
-  ```
+
+```
 $ rakudobrew build moar
 ```
 
