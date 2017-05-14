@@ -72,6 +72,16 @@ $ rakudobrew build panda
 $ rakudobrew build zef
 ```
 
+## Making new scripts available
+
+After you have installed new modules and scripts with zef or panda, you can run
+
+```
+$ rakudobrew rehash
+```
+
+to make the scripts available in `~/.rakudobrew/bin` and thus your PATH.
+
 ## Upgrading your Perl 6 implementation
 
 ```
