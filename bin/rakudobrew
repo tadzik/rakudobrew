@@ -381,11 +381,6 @@ sub build_impl {
 
     run $impls{$impl}{configure} . " $configure_opts";
 
-    if (-d 'zef') {
-        say "Updating zef as well";
-        build_zef(undef, "$impl-$ver");
-    }
-
     # Might have new executables now -> rehash.
     rehash();
     unless (get_version()) {
