@@ -60,13 +60,14 @@ which should then be available as `perl6`.
 - You now need a module management tool, you can use either:
 
   - To use [Panda](https://github.com/tadzik/panda) (a Perl 6 module manager), do:
-  ```
+
+```
 $ rakudobrew build panda
 ```
 
-  - Or use [zef](https://github.com/ugexe/zef) (a Perl 6 Management Tool),
-do:
-  ```
+  - Or use [zef](https://github.com/ugexe/zef) (a Perl 6 Management Tool), do:
+
+```
 $ rakudobrew build zef
 ```
 
