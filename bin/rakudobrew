@@ -69,11 +69,19 @@ sub run {
 
 my $arg = shift // 'help';
 if ($arg eq 'switch') {
-    my $version = shift;
-    set_global_version($version);
+    if (!@ARGV) {
+        say STDERR "Usage: $brew_name switch <version>";
+    }
+    else {
+        set_global_version($ARGV[0]);
+    }
 } elsif ($arg eq 'nuke') {
-    my $version = shift;
-    nuke($version);
+    if (!@ARGV) {
+        say STDERR "Usage: $brew_name nuke <version>";
+    }
+    else {
+        nuke($ARGV[0]);
+    }
 } elsif ($arg eq 'rehash') {
     rehash();
 } elsif ($arg eq 'list' or $arg eq 'versions') {
@@ -264,8 +272,8 @@ EOT
     say "$brew_name build zef";
     say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "$brew_name rehash";
-    say "$brew_name switch ", (join "|", available_backends());
-    say "$brew_name nuke ", (join "|", available_backends());
+    say "$brew_name switch <version>";
+    say "$brew_name nuke <version>";
     say "$brew_name self-upgrade";
     say "$brew_name test [", (join "|", available_backends(), "all"), "]";
     say "$brew_name exec <command> [command-args]";
@@ -299,19 +307,13 @@ sub nuke {
         my $matched = shift;
         say "Nuking $matched";
         remove_tree(catdir($prefix, $matched));
+        # Might have lost executables -> rehash.
+        rehash();
     });
-    # Might have lost executables -> rehash.
-    rehash();
 }
 
 sub match_and_run {
     my ($version, $action) = @_;
-    if (!$version) {
-        say "Switch to what?";
-        say "Available builds";
-        map {say} list();
-        return;
-    }
     opendir(my $dh, $prefix);
     my @match = grep { /\Q$version/ } list();
     my ($matched, $ambiguous) = @match;
