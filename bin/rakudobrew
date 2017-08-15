@@ -9,6 +9,7 @@ use File::Path qw(remove_tree);
 use File::Basename;
 use File::Spec::Functions qw(catfile catdir splitdir splitpath catpath updir);
 use Carp qw(croak);
+use File::Temp qw(tempdir);
 
 my $brew_name = 'rakudobrew';
 my $env_var = 'PL6ENV_VERSION';
@@ -100,6 +101,7 @@ if ($arg eq 'switch') {
     my $impl = shift;
     my $ver = shift
         if @ARGV && $ARGV[0] !~ /^--/;
+    $ver = current_release() if $ver eq 'current-release';
     my $configure_opts = '';
     if (@ARGV && $ARGV[0] =~ /^--configure-opts=/) {
         $configure_opts = shift;
@@ -260,7 +262,7 @@ EOT
     say "Usage:";
     say "$brew_name current";
     say "$brew_name list-available";
-    say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
+    say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1|current-release]", " [--configure-opts=]";
     say "$brew_name build zef";
     say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "$brew_name rehash";
@@ -939,4 +941,11 @@ sub get_git_url {
     } else {
         return "${protocol}://${host}/${user}/${project}.git";
     }
+}
+
+sub current_release {
+    my $dir = tempdir();
+    my $ver = qx|git clone --no-checkout --depth 1 git\@github.com:rakudo/rakudo.git $dir > /dev/null 2>&1 && cd $dir && git show nom:VERSION && rm -rf $dir|;
+    chomp $ver;
+    return $ver;
 }
