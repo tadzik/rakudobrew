@@ -64,6 +64,25 @@ which should then be available as `perl6`.
 $ rakudobrew build zef
 ```
 
+## Building the last monthly build
+
+Rakudo Perl produces new versions every month on the 20th (ish);
+version names include the year and month, like this: `2017.08` (for
+August 2017). Get available versions by
+
+```
+$ rakudobrew list-available
+```
+
+and build it with
+
+```
+$ rakudobrew build moar 2017.08
+```
+
+`2017.08` is actually a tag in the Rakudo Perl repo. You can use any
+tag there to build that particular version. 
+
 ## Making new scripts available
 
 After you have installed new modules and scripts with zef or panda, you can run
