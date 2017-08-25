@@ -4,15 +4,27 @@ use strict;
 use warnings;
 use 5.010;
 use Cwd qw(cwd realpath);
-use FindBin qw($RealBin);
+use FindBin qw($RealBin); # Note: fails on cygwin/msys
 use File::Path qw(remove_tree);
 use File::Basename;
 use File::Spec::Functions qw(catfile catdir splitdir splitpath catpath updir);
+use List::Util qw(max);
 use Carp qw(croak);
 
 my $brew_name = 'rakudobrew';
 my $env_var = 'PL6ENV_VERSION';
 my $local_filename = '.perl6-version';
+
+if ($^O =~ /msys|cygwin/i) {
+	# Depending on which executable name this script is invoked with, 
+	# the script path and/or $0 may have either '/' or '\' as a separator.
+	# Basename/dirname and File::Spec don't work in every circumstance.
+	# And $FindBin::RealBin fails for all directories in these environments.
+	# $FindBin::RealScript works depending on CWD, but it's not good enough.
+	# TODO: add custom readlink to resolve symlinks.
+	$RealBin = substr(__FILE__, 0, max(rindex(__FILE__, '/'), rindex(__FILE__, "\\")));
+	$0 =~ s|\\|/|g;
+}
 
 my $prefix = catdir($RealBin, updir());
 my $git_reference = catfile($prefix, 'git_reference');
@@ -580,7 +592,7 @@ sub rehash {
 
     my @bins = map { slurp_dir($_) } @paths;
 
-    if ($^O =~ /win32/i) {
+    if ($^O =~ /win32|msys|cygwin/i) {
         # This wrapper is needed because:
         # - We want rakudobrew to work even when the .pl ending is not associated with the perl program and we do not want to put `perl` before every call to a shim.
         # - exec() in perl on Windows behaves differently from running the target program directly (output ends up on the console differently).
@@ -799,7 +811,7 @@ sub set_local_version {
 sub get_global_version {
     if (-e catdir($prefix, 'CURRENT')) {
         my $cur = slurp(catdir($prefix, 'CURRENT'));
-        chomp $cur;
+        $cur =~ s/\r?\n$//;
         return $cur;
     }
     else {
@@ -859,7 +871,7 @@ sub which {
     }
 
     my $target; {
-        if ($^O =~ /win32/i) {
+        if ($^O =~ /win32|msys|cygwin/i) {
             # The postfix of an executable on Windows is often unclear.
             # Thus we look for files with a basename matching the given
             # name.
