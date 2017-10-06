@@ -659,6 +659,35 @@ sub get_bin_paths {
     );
 }
 
+# Provide the user shell name.
+#
+# It checks the $ENV{'SHELL'} variable
+# or defaults to Bourne shell. Returns
+# the simple name of the shell (e.g., 'zsh').
+sub user_shell_name {
+    # default to Bourne shell if none is found
+    my $shell = $ENV{'SHELL'} || '/bin/sh';
+    $shell = ( splitdir( $shell ) )[ -1 ];
+    $shell =~ s/[^a-z]+$//; # remove version numbers
+    return $shell;
+}
+
+# Provides the guessed configuration file
+# for the user's shell or undef if none is found.
+sub guess_user_shell_configuration_file {
+    my $shell = user_shell_name;
+    my %profiles = ( 'bash' => [ '.bash_profile', '.profile' ],
+                     'csh'  => [ '.cshrc' ],
+                     'sh'   => [ '.profile' ],
+                     'zsh'  => [ '.zshenv', '.profile' ]
+        );
+
+
+    for ( @{ $profiles{ $shell } } ){
+        return $_ if ( -f catfile( $ENV{'HOME'} ,$_ ) );
+    }
+}
+
 sub init {
     my $brew_exec = catfile($RealBin, $brew_name);
     if ($^O =~ /win32/i) {
@@ -819,7 +848,7 @@ sub set_global_version {
 sub get_version {
     my $version = get_shell_version();
     return $version if defined $version;
-    
+
     # Check for local version by looking for a `.perl6-version` file in the current and parent folders.
     $version = get_local_version();
     return $version if defined $version;
@@ -926,7 +955,7 @@ sub do_exec {
     my ($program, $args) = @_;
 
     my $target = which($program);
-    
+
     # Run.
     exec { $target } ($target, @$args);
     die "Executing $target failed with: $!";
