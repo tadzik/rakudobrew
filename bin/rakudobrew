@@ -688,6 +688,18 @@ sub guess_user_shell_configuration_file {
     }
 }
 
+# Provides the correct line for exporting a variable
+# in the user's shell.
+sub user_shell_export_variable {
+    my ( $var_name, $var_value ) = @_;
+    my $shell = user_shell_name;
+
+    return sprintf 'setenv %s %s:$%s', $var_name, $var_value, $var_name if ( $shell =~ /t?csh$/ );
+    return sprintf 'export %s=%s:$%s', $var_name, $var_value, $var_name;
+
+}
+
+
 sub init {
     my $brew_exec = catfile($RealBin, $brew_name);
     if ($^O =~ /win32/i) {
@@ -713,8 +725,9 @@ EOT
     }
     else {
         if (@_ and $_[0] eq '-') {
+            my $export_path = user_shell_export_variable( 'PATH', $RealBin );
             say <<EOT;
-export PATH="$RealBin:\${PATH}"
+$export_path
 $brew_name() {
   local command
   command="\$1"
