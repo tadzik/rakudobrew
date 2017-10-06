@@ -308,7 +308,8 @@ sub nuke {
 sub match_and_run {
     my ($version, $action, $command) = @_;
     if (!$version) {
-        say "Please specify which build you need to [$command]!";
+        say "Please specify which build you need to [$command]!"   if ( $command );
+        say 'Please specify on which build you need to work onto!' unless( $command );
         say 'Available builds:';
         map {say} list();
         return;
