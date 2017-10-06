@@ -731,15 +731,23 @@ $brew_name() {
 }
 EOT
         }
-        else {
+else {
+    my $shell     = user_shell_name;
+    my $profile   = guess_user_shell_configuration_file || 'profile';
+    my $shell_msg = '(often ~/.bash_profile or ~/.profile)';
+
+    if ( $shell && $profile ){
+        $shell_msg = sprintf 'You seem to run %s with configuration in ~/%s', $shell, $profile;
+    }
+
         say <<EOT;
 # Load $brew_name automatically by adding
 #   eval "\$($brew_exec init -)"
 # to your local profile file.
-# (often ~/.bash_profile or ~/.profile)
+# $shell_msg
 # This can be easily done using:
 
-echo 'eval "\$($brew_exec init -)"' >> ~/.profile
+echo 'eval "\$($brew_exec init -)"' >> ~/$profile
 
 EOT
         }
