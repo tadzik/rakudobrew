@@ -264,8 +264,8 @@ EOT
     say "$brew_name build zef";
     say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "$brew_name rehash";
-    say "$brew_name switch ", (join "|", available_backends());
-    say "$brew_name nuke ", (join "|", available_backends());
+    say "$brew_name switch <", (join "|", available_backends()) .'>';
+    say "$brew_name nuke <", (join "|", available_backends()) . '>';
     say "$brew_name self-upgrade";
     say "$brew_name test [", (join "|", available_backends(), "all"), "]";
     say "$brew_name exec <command> [command-args]";
@@ -299,16 +299,17 @@ sub nuke {
         my $matched = shift;
         say "Nuking $matched";
         remove_tree(catdir($prefix, $matched));
-    });
+    },
+                  'nuke' );
     # Might have lost executables -> rehash.
     rehash();
 }
 
 sub match_and_run {
-    my ($version, $action) = @_;
+    my ($version, $action, $command) = @_;
     if (!$version) {
-        say "Switch to what?";
-        say "Available builds";
+        say "Please specify which build you need to [$command]!";
+        say 'Available builds:';
         map {say} list();
         return;
     }
@@ -813,13 +814,13 @@ sub set_global_version {
         my $matched = shift;
         say "Switching to $matched";
         spurt(catfile($prefix, 'CURRENT'), $matched);
-    });
+    }, 'switch to' );
 }
 
 sub get_version {
     my $version = get_shell_version();
     return $version if defined $version;
-    
+
     # Check for local version by looking for a `.perl6-version` file in the current and parent folders.
     $version = get_local_version();
     return $version if defined $version;
@@ -926,7 +927,7 @@ sub do_exec {
     my ($program, $args) = @_;
 
     my $target = which($program);
-    
+
     # Run.
     exec { $target } ($target, @$args);
     die "Executing $target failed with: $!";
