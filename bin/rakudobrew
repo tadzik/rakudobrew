@@ -1060,5 +1060,14 @@ Usage: rakudobrew test [jvm|moar|moar-blead|all]
 Performs a C<make test> on the current version or the specified version.
 
 
+=head1 COMMAND: exec
+
+Usage: rakudobrew exec <command> [command-args]
+
+Performs an C<exec> system calls and therefore never returns back to the program.
+IN other words, this means that C<command> replaces rakudobrew. See the exec
+perldoc documentation for more details.
+
+
 
 =cut
