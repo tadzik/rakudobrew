@@ -999,5 +999,13 @@ Usage: rakudobrew nuke <version>
 The C<nuke> command totally destroy the specified Perl 6 version from your repository
 of installed backends.
 
+=head1 COMMAND: list-available
+
+Usage: rakudobrew list-available
+
+The C<list-available> command shows the most recent list of available Perl 6 instances 
+and backends that can be compiled and installed on the local Perl repository.
+Installed Perls will be marked with an asterisk at the beginning of the line.
+
 
 =cut
