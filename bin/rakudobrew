@@ -679,7 +679,7 @@ sub guess_user_shell_configuration_file {
     my %profiles = ( 'bash' => [ '.bash_profile', '.profile' ],
                      'csh'  => [ '.cshrc' ],
                      'sh'   => [ '.profile' ],
-                     'zsh'  => [ '.zshenv', '.profile' ]
+                     'zsh'  => [ '.zshenv', '.zshrc', '.zlogin' ]
         );
 
 
