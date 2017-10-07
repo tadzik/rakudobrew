@@ -265,7 +265,6 @@ EOT
 	# the user wants help for a specific command
 	# e.g., rakudobrew help list
 	my $command = $ARGV[ 0 ];
-	say "$brew_name help [$command]";
 
 	require Pod::Usage;
 	my $help_text = "";
