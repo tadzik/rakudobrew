@@ -1053,4 +1053,12 @@ Usage: rakudobrew self-upgrade
 Performs a C<pull> from the git repository of the project, allowing the installation of the latest
 _version of rakudobrew.
 
+=head1 COMMAND: test
+
+Usage: rakudobrew test [jvm|moar|moar-blead|all]
+
+Performs a C<make test> on the current version or the specified version.
+
+
+
 =cut
