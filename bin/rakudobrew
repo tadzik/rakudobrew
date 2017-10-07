@@ -285,7 +285,6 @@ EOT
 	$help_text = "Cannot find documentation for [$command]!" if ($help_text =~ /\A\s*\Z/);
 	close $pod_fh;
 	say $help_text;
-	exit;
     }
     else { 
 	# here the user does not want any specific help
