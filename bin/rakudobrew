@@ -1007,5 +1007,19 @@ The C<list-available> command shows the most recent list of available Perl 6 ins
 and backends that can be compiled and installed on the local Perl repository.
 Installed Perls will be marked with an asterisk at the beginning of the line.
 
+=head1 COMMAND: switch
+
+Usage: rakudobrew switch <version>
+
+The C<switch> command activates the specified version of the Perl 6 executable.
+The version specified must be installed on the local repository.
+
+
+=head1 COMMAND: current
+
+Usage: rakudobrew current
+
+The C<current> command provides details about the currently running Perl 6 instance.
+
 
 =cut
