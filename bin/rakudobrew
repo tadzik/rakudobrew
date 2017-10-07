@@ -1022,4 +1022,35 @@ Usage: rakudobrew current
 The C<current> command provides details about the currently running Perl 6 instance.
 
 
+=head1 COMMAND: build
+
+Usage: rakudobrew build jvm|moar|moar-blead|all [tag|branch|sha-1] [--configure-opts=]
+
+Usage: rakudobrew build zef
+
+The C<build> command downloads, compiles and installs the specified C<tag> or C<version>
+or C<sha-1> pointing to a specific revision 
+of Perl 6 over the required backend C<moar>, C<moar-blead>, C<jvm> or C<all> of them.
+Please note that this could take a while, be patient.
+
+In the case the C<zef> argument is passed as the only one to C<build>, then
+the "zef" module manager is compiled and installed.
+
+
+=head1 COMMAND: triple
+
+Usage: rakudobrew triple [rakudo-ver [nqp-ver [moar-ver]]]
+
+The C<triple> command builds an instance of C<rakudo>, C<nqp> and C<moar>.
+Versions to be built can be specified cascading, otherwise the last version available
+is built.
+
+
+=head1 COMMAND: self-upgrade
+
+Usage: rakudobrew self-upgrade
+
+Performs a C<pull> from the git repository of the project, allowing the installation of the latest
+_version of rakudobrew.
+
 =cut
