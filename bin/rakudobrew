@@ -682,6 +682,14 @@ sub guess_user_shell_configuration_file {
                      'zsh'  => [ '.zshenv', '.zshrc', '.zlogin' ]
         );
 
+    # add zsh files in custom paths
+    # it should be true that if ZDOTDIR has been set the user
+    # wants to use the zsh, but another shell could be
+    # in place now
+    if ( exists $ENV{ 'ZDOTDIR' } ){
+	push @{ $profiles{ 'zsh'} }, 
+	    map { catfile( $ENV{ 'ZDOTDIR' }, $_ ) } @{ $profiles{ 'zsh' } };
+    }
 
     for ( @{ $profiles{ $shell } } ){
         return $_ if ( -f catfile( $ENV{'HOME'} ,$_ ) );
