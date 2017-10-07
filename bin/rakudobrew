@@ -1069,5 +1069,16 @@ IN other words, this means that C<command> replaces rakudobrew. See the exec
 perldoc documentation for more details.
 
 
+=head1 COMMAND: init
+
+Usage: rakudobrew init [-]
+
+The C<init> command performs some checks on the environment and provides
+either instructions on how to setup rakudobrew to work properly or
+a shell function to "alias" the command rakudobrew.
+When called with no arguments it does prints how to setup your shell
+for working with rakudobrew. Wehn called with C<-> it provides the shell function
+that will invoke rakudobrew the right way.
+
 
 =cut
