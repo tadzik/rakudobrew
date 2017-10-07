@@ -1080,5 +1080,20 @@ When called with no arguments it does prints how to setup your shell
 for working with rakudobrew. Wehn called with C<-> it provides the shell function
 that will invoke rakudobrew the right way.
 
+=head1 COMMAND: versions
+
+Usage: rakudobrew versions
+
+Provides a list of installed Perl 6 versions.
+The current selected Perl 6 environment is marked with a star on the beginning
+of the line.
+
+
+=head1 COMMAND: list
+
+Usage: rakudobrew list
+
+The C<list> command is an alias for C<versions>, see the help
+for the latter.
 
 =cut
