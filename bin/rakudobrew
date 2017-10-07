@@ -309,7 +309,7 @@ EOT
 	say "$brew_name local [version]";
 	say "$brew_name global [version]";
 	say "$brew_name version";
-	say "$brew_name versions # or $brew_name list";
+	say "$brew_name versions|list";
 	say "$brew_name which <command>";
 	say "$brew_name whence [--path] <command>";
     }
