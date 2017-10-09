@@ -100,8 +100,8 @@ if ($arg eq 'switch') {
     }
 } elsif ($arg eq 'build') {
     my $impl = shift;
-    my $ver = shift
-        if @ARGV && $ARGV[0] !~ /^--/;
+    my $ver  = undef;
+    $ver = shift if @ARGV && $ARGV[0] !~ /^--/;
     my $configure_opts = '';
     if (@ARGV && $ARGV[0] =~ /^--configure-opts=/) {
         $configure_opts = shift;
