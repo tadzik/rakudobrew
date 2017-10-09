@@ -85,12 +85,12 @@ if ($arg eq 'switch') {
     my ($cur_backend, $cur_rakudo) = split '-', (get_version() // ''), 2;
     $cur_backend //= '';
     $cur_rakudo  //= '';
-    say "Available Rakudo versions:";
+    say 'Available Rakudo versions:';
     map { say $cur_rakudo eq $_ ? "* $_" : "  $_" } available_rakudos();
     say "";
     $cur_backend |= '';
     $cur_rakudo |= '';
-    say "Available backends:";
+    say 'Available backends:';
     map { say $cur_backend eq $_ ? "* $_" : "  $_" } available_backends();
 } elsif ($arg eq 'current') {
     if (my $c = get_version()) {
@@ -120,7 +120,7 @@ if ($arg eq 'switch') {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
     build_triple($rakudo_ver, $nqp_ver, $moar_ver);
 } elsif ($arg eq 'build-panda') {
-    say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
+    say 'panda is discontinued; please use zef (rakudobrew build-zef) instead';
 } elsif ($arg eq 'build-zef') {
     build_zef();
     rehash();
@@ -182,7 +182,7 @@ Remove-Item Env:\\PL6_VERSION    # Unset.
 EOT
     }
     else {
-        say "The shell hook required to use the 'shell' subcommands is not installed.";
+        say 'The shell hook required to use the \'shell\' subcommands is not installed.';
         say "Run '$brew_name init' for installation instructions.";
     }
 } elsif ($arg eq 'local') {
@@ -259,7 +259,7 @@ EOT
         }
     }
 } else {
-    say "Usage:";
+    say 'Usage:';
     say "$brew_name current";
     say "$brew_name list-available";
     say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
@@ -309,8 +309,8 @@ sub nuke {
 sub match_and_run {
     my ($version, $action) = @_;
     if (!$version) {
-        say "Switch to what?";
-        say "Available builds";
+        say 'Switch to what?';
+        say 'Available builds';
         map {say} list();
         return;
     }
@@ -340,26 +340,23 @@ sub available_backends {
 sub build_impl {
     my ($impl, $ver, $configure_opts) = @_;
     unless (defined $impl) {
-        say "Build what?";
+        say 'Build what?';
         my ($cur) = split '-', (get_version() // ''), 2;
         $cur //= '';
         map { say $cur eq $_ ? "* $_" : "  $_" } available_backends();
         return;
     }
-    if ($impl eq "panda") {
-        say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
+    if ($impl eq 'panda') {
+        say 'panda is discontinued; please use zef (rakudobrew build-zef) instead';
         return;
-    } elsif ($impl eq "zef") {
+    } elsif ($impl eq 'zef') {
         build_zef();
         return;
     }
     unless (exists $impls{$impl}) {
-        my $warning = "Cannot build Rakudo with backend '$impl': this backend ";
-        if ($impl eq "parrot") {
-            $warning .= "is no longer supported.";
-        } else {
-            $warning .= "does not exist.";
-        }
+        my $warning = sprintf 'Cannot build Rakudo with backend [%s]: this backend %s!',
+            $impl,
+            ( $impl eq 'parrot' ? 'is no longer supported' : 'does not exist' );
         say $warning;
         return;
     }
@@ -440,11 +437,11 @@ sub build_triple {
         make('realclean');
     }
 
-    unless (-d "nqp") {
+    unless (-d 'nqp') {
         update_git_reference('nqp');
         run "$GIT clone --reference \"$git_reference/nqp\" $git_repos{nqp}";
     }
-    chdir "nqp";
+    chdir 'nqp';
     run "$GIT pull";
     run "$GIT checkout $nqp_ver";
 
@@ -452,7 +449,7 @@ sub build_triple {
         update_git_reference('MoarVM');
         run "$GIT clone --reference \"$git_reference/MoarVM\" $git_repos{MoarVM}";
     }
-    chdir "MoarVM";
+    chdir 'MoarVM';
     run "$GIT pull";
     run "$GIT checkout $moar_ver";
     run "$PERL5 Configure.pl --prefix=" . catdir(updir(), updir(), 'install');
@@ -755,7 +752,7 @@ sub get_shell_version {
         }
         else {
             say STDERR "Version '$version' is set via the PL6ENV_VERSION environment variable.";
-            say STDERR "This version is not installed. Ignoring.";
+            say STDERR 'This version is not installed. Ignoring.';
             say STDERR '';
             return;
         }
@@ -777,7 +774,7 @@ sub get_local_version {
             else {
                 say STDERR "Version '$version' is given in the";
                 say STDERR "$filepath";
-                say STDERR "file. This version is not installed. Ignoring.";
+                say STDERR 'file. This version is not installed. Ignoring.';
                 say STDERR '';
             }
         }
