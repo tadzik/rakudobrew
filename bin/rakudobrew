@@ -286,7 +286,7 @@ exit;
 sub available_rakudos {
     my @output = qx|$GIT ls-remote --tags $git_repos{rakudo}|;
     my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
-    return sort grep { /^[\dv]/ } map(m{tags/([^\^]+)\^}, @tags);
+    return wantarray ? sort grep { /^[\dv]/ } map(m{tags/([^\^]+)\^}, @tags) : undef;
 }
 
 sub list {
