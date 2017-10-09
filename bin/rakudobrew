@@ -647,7 +647,7 @@ sub not_found {
 
 sub check_version {
     my $version = shift;
-    return undef if !defined $version;
+    return if !defined $version;
     my %versionsMap = map { $_ => 1 } list();
     return exists($versionsMap{$version});
 }
@@ -757,12 +757,11 @@ sub get_shell_version {
             say STDERR "Version '$version' is set via the PL6ENV_VERSION environment variable.";
             say STDERR "This version is not installed. Ignoring.";
             say STDERR '';
-            return undef;
+            return;
         }
     }
-    else {
-        return undef;
-    }
+
+    return;
 }
 
 sub get_local_version {
@@ -784,7 +783,7 @@ sub get_local_version {
         }
         pop @fragments;
     }
-    return undef;
+    return;
 }
 
 sub set_local_version {
@@ -805,7 +804,7 @@ sub get_global_version {
         return $cur;
     }
     else {
-        return undef;
+        return;
     }
 }
 
