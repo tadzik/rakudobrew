@@ -54,7 +54,9 @@ my %impls = (
 );
 
 sub run {
-    system(@_) and croak "Failed running ".$_[0]
+    # this is the same as
+    # system(@_) == 0 or croak ".."
+    system(@_) and croak "Failed running '$_[0]' (exit code $?)";
 }
 
 { # Check whether we are called as a shim and forward if yes.
@@ -819,7 +821,7 @@ sub set_global_version {
 sub get_version {
     my $version = get_shell_version();
     return $version if defined $version;
-    
+
     # Check for local version by looking for a `.perl6-version` file in the current and parent folders.
     $version = get_local_version();
     return $version if defined $version;
@@ -926,7 +928,7 @@ sub do_exec {
     my ($program, $args) = @_;
 
     my $target = which($program);
-    
+
     # Run.
     exec { $target } ($target, @$args);
     die "Executing $target failed with: $!";
