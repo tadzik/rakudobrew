@@ -361,7 +361,7 @@ sub build_impl {
         say $warning;
         return;
     }
-    $ver //= 'nom';
+    $ver //= 'master';
     chdir $prefix;
     unless (-d "$impl-$ver") {
         for(@{$impls{$impl}{need_repo}}) {
