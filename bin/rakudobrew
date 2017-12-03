@@ -84,12 +84,12 @@ if ($arg eq 'switch') {
     $cur_backend //= '';
     $cur_rakudo  //= '';
     say "Available Rakudo versions:";
-    map { say $cur_rakudo eq $_ ? "* $_" : "  $_" } available_rakudos();
+    map { say $cur_rakudo eq $_ ? "→ $_" : "  $_" } available_rakudos();
     say "";
     $cur_backend |= '';
     $cur_rakudo |= '';
     say "Available backends:";
-    map { say $cur_backend eq $_ ? "* $_" : "  $_" } available_backends();
+    map { say $cur_backend eq $_ ? "→ $_" : "  $_" } available_backends();
 } elsif ($arg eq 'current') {
     if (my $c = get_version()) {
         say "Currently running $c"
@@ -284,7 +284,7 @@ exit;
 sub available_rakudos {
     my @output = qx|$GIT ls-remote --tags $git_repos{rakudo}|;
     my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
-    return sort grep { /^[\dv]/ } map(m{tags/([^\^]+)\^}, @tags);
+    return reverse sort grep { /^[\dv]/ } map(m{tags/([^\^]+)\^}, @tags);
 }
 
 sub list {
