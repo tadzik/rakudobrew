@@ -363,7 +363,7 @@ sub build_impl {
         say $warning;
         return;
     }
-    $ver //= 'nom';
+    $ver //= 'master';
     chdir $prefix;
     unless (-d "$impl-$ver") {
         for(@{$impls{$impl}{need_repo}}) {
@@ -406,11 +406,17 @@ sub update_git_reference {
 
 sub make {
     my $command = shift;
-    if(!-f 'Makefile') {
+
+    my $version = get_local_version() // get_global_version();
+
+    # this has to be the MoarVM Makefile
+    # TODO other backends
+    my $makefile_path =catfile($prefix, $version, 'nqp','MoarVM','Makefile'); 
+    if(!-f $makefile_path) {
         say STDERR "No Makefile found. Aborting.";
         exit 1;
     }
-    my $makefile = slurp('Makefile');
+    my $makefile = slurp($makefile_path);
     if($makefile =~ /^MAKE\s*=\s*(\w+)\s*$/m) {
         my $make = $1;
         run("$make $command");
@@ -459,7 +465,7 @@ sub build_triple {
     make('install');
 
     chdir updir();
-    run "$PERL5 Configure.pl --backend=moar --prefix=" . catdir(updir(), 'install');
+    run "$PERL5 Configure.pl --backend=moar --prefix=" . catdir($prefix, $name, 'install');
     make('install');
 
     chdir updir();
