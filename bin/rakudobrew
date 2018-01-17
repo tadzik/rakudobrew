@@ -946,7 +946,6 @@ sub get_git_url {
 sub current_release {
     my $dir = tempdir( CLEANUP => 1 );
     my $cmd_sep = '&&';
-    $cmd_sep = '&' if $^O =~ /win32/i;
     my $ver = qx|git clone --quiet --no-checkout --depth 1 git\@github.com:rakudo/rakudo.git $dir $cmd_sep cd $dir $cmd_sep git show nom:VERSION|;
     chomp $ver;
     return $ver;
