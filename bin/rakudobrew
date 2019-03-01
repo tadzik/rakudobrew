@@ -80,7 +80,7 @@ if ($arg eq 'switch') {
     rehash();
 } elsif ($arg eq 'list' or $arg eq 'versions') {
     my $cur = get_version() // '';
-    map { say $cur eq $_ ? "* $_" : "  $_" } sort { $a cmp $b } list();
+    map { say $cur eq $_ ? "* $_" : "  $_" } list();
 } elsif ($arg eq 'list-available') {
     my ($cur_backend, $cur_rakudo) = split '-', (get_version() // ''), 2;
     $cur_backend //= '';
@@ -291,8 +291,8 @@ sub available_rakudos {
 
 sub list {
     opendir(my $dh, $versions_dir);
-    grep({/^[^.]/ && -d catdir($versions_dir, $_)
-          && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'zef' } readdir($dh);
+    sort({ $a cmp $b } grep({/^[^.]/ && -d catdir($versions_dir, $_)
+          && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'zef' } readdir($dh)));
 }
 
 sub nuke {
