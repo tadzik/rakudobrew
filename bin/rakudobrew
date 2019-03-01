@@ -15,6 +15,8 @@ my $env_var = 'PL6ENV_VERSION';
 my $local_filename = '.perl6-version';
 
 my $prefix = catdir($RealBin, updir());
+my $versions_dir = catdir($prefix, 'versions');
+my $shim_dir = catdir($prefix, 'shims');
 my $git_reference = catfile($prefix, 'git_reference');
 
 unless (-d $git_reference) {
@@ -288,8 +290,8 @@ sub available_rakudos {
 }
 
 sub list {
-    opendir(my $dh, $prefix);
-    grep {/^[^.]/ && -d catdir($prefix, $_)
+    opendir(my $dh, $versions_dir);
+    grep({/^[^.]/ && -d catdir($versions_dir, $_)
           && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'zef' } readdir($dh);
 }
 
@@ -298,7 +300,7 @@ sub nuke {
     match_and_run($version, sub {
         my $matched = shift;
         say "Nuking $matched";
-        remove_tree(catdir($prefix, $matched));
+        remove_tree(catdir($versions_dir, $matched));
     });
     # Might have lost executables -> rehash.
     rehash();
@@ -312,7 +314,7 @@ sub match_and_run {
         map {say} list();
         return;
     }
-    opendir(my $dh, $prefix);
+    opendir(my $dh, $versions_dir);
     my @match = grep { /\Q$version/ } list();
     my ($matched, $ambiguous) = @match;
     if ($ambiguous) {
@@ -362,7 +364,7 @@ sub build_impl {
         return;
     }
     $ver //= 'master';
-    chdir $prefix;
+    chdir $versions_dir;
     unless (-d "$impl-$ver") {
         for(@{$impls{$impl}{need_repo}}) {
             update_git_reference($_);
@@ -425,7 +427,7 @@ sub build_triple {
     $rakudo_ver //= 'HEAD';
     $nqp_ver //= 'HEAD';
     $moar_ver //= 'HEAD';
-    chdir $prefix;
+    chdir $versions_dir;
     my $name = "$impl-$rakudo_ver-$nqp_ver-$moar_ver";
     unless (-d $name) {
         update_git_reference('rakudo');
@@ -484,7 +486,7 @@ sub build_zef {
         say STDERR "$brew_name: No version set.";
         exit 1;
     }
-    chdir catdir($prefix, $version);
+    chdir catdir($versions_dir, $version);
     unless (-d 'zef') {
         run "$GIT clone $git_repos{zef}";
     }
@@ -557,12 +559,10 @@ sub rehash {
     say "Updating shims";
 
     { # Remove the existing shims.
-        opendir(my $dh, catdir($prefix, 'bin'));
+        opendir(my $dh, $shim_dir);
         while (my $entry = readdir $dh) {
             next if $entry =~ /^\./;
-            next if $entry =~ /$brew_name/;
-            next if $entry =~ /$brew_name\.bat/;
-            next unless open my $check_fh, '<', catfile($prefix, 'bin', $entry);
+            next unless open my $check_fh, '<', catfile($shim_dir, $entry);
             my $is_shim;
             LINE: while (my $line = <$check_fh>) {
                 if ($line =~ # detect self by sensible and fallback approaches
@@ -573,7 +573,7 @@ sub rehash {
                 }
             }
             next unless $is_shim;
-            unlink catfile($prefix, 'bin', $entry);
+            unlink catfile($shim_dir, $entry);
         }
         closedir $dh;
     }
@@ -588,7 +588,7 @@ sub rehash {
         @bins = map { my ($basename, undef, undef) = my_fileparse($_); $basename } @bins;
         @bins = uniq(@bins);
         for (@bins) {
-            spurt(catfile($prefix, 'bin', $_.'.bat'), <<EOT);
+            spurt(catfile($shim_dir, $_.'.bat'), <<EOT);
 \@ECHO OFF
 SETLOCAL
 SET brew_cmd=perl \%~dp0$brew_name win-run \%~n0
@@ -601,7 +601,7 @@ EOT
     }
     else {
         for (@bins) {
-            link $0, catfile($prefix, 'bin', $_);
+            link $0, catfile($shim_dir, $_);
         }
     }
 }
@@ -627,7 +627,7 @@ sub test {
     }
     if ($matched and not $ambiguous) {
         say "Spectesting $matched";
-        chdir catdir($prefix, $matched);
+        chdir catdir($versions_dir, $matched);
         make('spectest');
     } elsif (@match) {
         say "Sorry, I'm not sure if you mean:";
@@ -654,8 +654,8 @@ sub get_bin_paths {
     my $version = shift;
     my $program = scalar(shift) || undef;
     return (
-        catfile($prefix, $version, 'install', 'bin', $program // ()),
-        catfile($prefix, $version, 'install', 'share', 'perl6', 'site', 'bin', $program // ()),
+        catfile($versions_dir, $version, 'install', 'bin', $program // ()),
+        catfile($versions_dir, $version, 'install', 'share', 'perl6', 'site', 'bin', $program // ()),
     );
 }
 
