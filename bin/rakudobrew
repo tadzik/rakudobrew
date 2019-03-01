@@ -309,8 +309,8 @@ sub nuke {
 sub match_and_run {
     my ($version, $action) = @_;
     if (!$version) {
-        say "Switch to what?";
-        say "Available builds";
+        say "Which version do you mean?";
+        say "Available builds:";
         map {say} list();
         return;
     }
