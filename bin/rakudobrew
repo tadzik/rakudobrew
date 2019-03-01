@@ -5,6 +5,8 @@ use warnings;
 use 5.010;
 use Cwd qw(cwd realpath);
 use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use File::Which qw();
 use File::Path qw(remove_tree);
 use File::Basename;
 use File::Spec::Functions qw(catfile catdir splitdir splitpath catpath updir);
@@ -291,8 +293,8 @@ sub available_rakudos {
 
 sub list {
     opendir(my $dh, $versions_dir);
-    sort({ $a cmp $b } grep({/^[^.]/ && -d catdir($versions_dir, $_)
-          && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'zef' } readdir($dh)));
+    ('system', sort({ $a cmp $b } grep({/^[^.]/ && -d catdir($versions_dir, $_)
+          && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'zef' } readdir($dh))));
 }
 
 sub nuke {
@@ -859,7 +861,10 @@ sub which {
     }
 
     my $target; {
-        if ($^O =~ /win32/i) {
+        if ($version eq 'system') {
+            $target = File::Which::which($prog);
+        }
+        elsif ($^O =~ /win32/i) {
             # The postfix of an executable on Windows is often unclear.
             # Thus we look for files with a basename matching the given
             # name.
