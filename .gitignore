@@ -1,4 +1,5 @@
 CURRENT
+MODE
 versions/*
 shims/*
 git_reference/
