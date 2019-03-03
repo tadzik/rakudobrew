@@ -188,9 +188,14 @@ EOT
         or  $command eq 'switch'
         or  $command eq 'shell') {
             if (@ARGV) {
-                match_and_run($ARGV[0], sub {
-                    $version = $ARGV[0];
-                });
+                if ($ARGV[0] eq '--unset') {
+                    $version = get_global_version();
+                }
+                else {
+                    match_and_run($ARGV[0], sub {
+                        $version = $ARGV[0];
+                    });
+                }
             }
         }
 
