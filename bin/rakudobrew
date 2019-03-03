@@ -147,12 +147,12 @@ if ($arg eq 'nuke') {
         say <<EOT;
 To (un)set a version locally in this running shell session use the following commands:
 CMD:
-SET PL6_VERSION=YOUR_VERSION
-SET PL6_VERSION=                # Unset. No trailing whitespace!
+SET $env_var=YOUR_VERSION
+SET $env_var=                # Unset. No trailing whitespace!
 
 PowerShell:
-\$Env:PL6_VERSION="YOUR_VERSION"
-Remove-Item Env:\\PL6_VERSION    # Unset.
+\$Env:$env_var="YOUR_VERSION"
+Remove-Item Env:\\$env_var    # Unset.
 EOT
     }
     else {
