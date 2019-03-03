@@ -302,7 +302,7 @@ EOT
     say '';
     say "$brew_name list-available";
     say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
-    say "$brew_name build zef";
+    say "$brew_name build-zef";
     say '';
     say "$brew_name exec <command> [command-args]";
     say "$brew_name which <command>";
