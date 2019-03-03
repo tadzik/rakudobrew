@@ -73,15 +73,77 @@ sub run {
 
 my $arg = shift // 'help';
 
-if ($arg eq 'nuke') {
+if ($arg eq 'version' || $arg eq 'current') {
+    if (my $c = get_version()) {
+        say "Currently running $c"
+    } else {
+        say STDERR "Not running anything at the moment. Use '$brew_name switch' to set a version";
+        exit 1;
+    }
+} elsif ($arg eq 'versions' || $arg eq 'list') {
+    my $cur = get_version() // '';
+    map { say $cur eq $_ ? "* $_" : "  $_" } list();
+} elsif ($arg eq 'global' || $arg eq 'switch') {
+    if (!@ARGV) {
+        my $version = get_global_version();
+        if ($version) {
+            say $version;
+        }
+        else {
+            say "$brew_name: no global version configured";
+        }
+    }
+    else {
+        set_global_version($ARGV[0]);
+        validate_shell_hook_env($ARGV[0]);
+    }
+} elsif ($arg eq 'shell') {
+    if ($^O =~ /win32/i) {
+        say <<EOT;
+To (un)set a version locally in this running shell session use the following commands:
+CMD:
+SET $env_var=YOUR_VERSION
+SET $env_var=                # Unset. No trailing whitespace!
+
+PowerShell:
+\$Env:$env_var="YOUR_VERSION"
+Remove-Item Env:\\$env_var    # Unset.
+EOT
+    }
+    else {
+        if (!@ARGV) {
+            my $shell_version = get_shell_version();
+            if (defined $shell_version) {
+                say "$shell_version";
+            }
+            else {
+                say "$brew_name: no shell-specific version configured";
+            }
+        }
+        else {
+            validate_shell_hook_shell($ARGV[0]);
+        }
+    }
+} elsif ($arg eq 'local') {
+    validate_brew_mode();
+    if (!@ARGV) {
+        my $version = get_local_version();
+        if ($version) {
+            say $version;
+        }
+        else {
+            say "$brew_name: no local version configured for this directory";
+        }
+    }
+    else {
+        set_local_version($ARGV[0]);
+    }
+} elsif ($arg eq 'nuke') {
     my $version = shift;
     nuke($version);
 } elsif ($arg eq 'rehash') {
     validate_brew_mode();
     rehash();
-} elsif ($arg eq 'list' or $arg eq 'versions') {
-    my $cur = get_version() // '';
-    map { say $cur eq $_ ? "* $_" : "  $_" } list();
 } elsif ($arg eq 'list-available') {
     my ($cur_backend, $cur_rakudo) = split '-', (get_version() // ''), 2;
     $cur_backend //= '';
@@ -114,13 +176,42 @@ if ($arg eq 'nuke') {
 } elsif ($arg eq 'triple') {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
     build_triple($rakudo_ver, $nqp_ver, $moar_ver);
-} elsif ($arg eq 'build-panda') {
-    say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
 } elsif ($arg eq 'build-zef') {
     build_zef();
     rehash();
+} elsif ($arg eq 'build-panda') {
+    say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
+} elsif ($arg eq 'exec') {
+    my $prog_name = shift;
+    do_exec($prog_name, \@ARGV);
+} elsif ($arg eq 'which') {
+    if (!@ARGV) {
+        say STDERR "Usage: $brew_name which <command>";
+    }
+    else {
+        map {say $_} which(@ARGV);
+    }
+} elsif ($arg eq 'whence') {
+    if (!@ARGV) {
+        say STDERR "Usage: $brew_name whence [--path] <command>";
+    }
+    else {
+        map {say $_} whence(@ARGV);
+    }
+} elsif ($arg eq 'mode') {
+    if (!@ARGV) {
+        say get_brew_mode();
+    }
+    else {
+        set_brew_mode($ARGV[0]);
+        if (get_brew_mode() eq 'env') {
+            validate_shell_hook_env($ARGV[0]);
+        }
+    }
 } elsif ($arg eq 'self-upgrade') {
     self_upgrade();
+} elsif ($arg eq 'init') {
+    init(@ARGV);
 } elsif ($arg eq 'test') {
     my $version = shift;
     if ($version && $version eq 'all') {
@@ -129,45 +220,6 @@ if ($arg eq 'nuke') {
         }
     } else {
         test($version);
-    }
-} elsif ($arg eq 'exec') {
-    my $prog_name = shift;
-    do_exec($prog_name, \@ARGV);
-} elsif ($arg eq 'version' || $arg eq 'current') {
-    if (my $c = get_version()) {
-        say "Currently running $c"
-    } else {
-        say STDERR "Not running anything at the moment. Use '$brew_name switch' to set a version";
-        exit 1;
-    }
-} elsif ($arg eq 'init') {
-    init(@ARGV);
-} elsif ($arg eq 'shell') {
-    if ($^O =~ /win32/i) {
-        say <<EOT;
-To (un)set a version locally in this running shell session use the following commands:
-CMD:
-SET $env_var=YOUR_VERSION
-SET $env_var=                # Unset. No trailing whitespace!
-
-PowerShell:
-\$Env:$env_var="YOUR_VERSION"
-Remove-Item Env:\\$env_var    # Unset.
-EOT
-    }
-    else {
-        if (!@ARGV) {
-            my $shell_version = get_shell_version();
-            if (defined $shell_version) {
-                say "$shell_version";
-            }
-            else {
-                say "$brew_name: no shell-specific version configured";
-            }
-        }
-        else {
-            validate_shell_hook_shell($ARGV[0]);
-        }
     }
 } elsif ($arg eq 'internal_shellmod') {
 	my $command = shift // '';
@@ -219,58 +271,6 @@ EOT
     }
 } elsif ($arg eq 'internal_completions') {
     print generate_completions(@ARGV);
-} elsif ($arg eq 'local') {
-    validate_brew_mode();
-    if (!@ARGV) {
-        my $version = get_local_version();
-        if ($version) {
-            say $version;
-        }
-        else {
-            say "$brew_name: no local version configured for this directory";
-        }
-    }
-    else {
-        set_local_version($ARGV[0]);
-    }
-} elsif ($arg eq 'global' || $arg eq 'switch') {
-    if (!@ARGV) {
-        my $version = get_global_version();
-        if ($version) {
-            say $version;
-        }
-        else {
-            say "$brew_name: no global version configured";
-        }
-    }
-    else {
-        set_global_version($ARGV[0]);
-        validate_shell_hook_env($ARGV[0]);
-    }
-} elsif ($arg eq 'which') {
-    if (!@ARGV) {
-        say STDERR "Usage: $brew_name which <command>";
-    }
-    else {
-        map {say $_} which(@ARGV);
-    }
-} elsif ($arg eq 'whence') {
-    if (!@ARGV) {
-        say STDERR "Usage: $brew_name whence [--path] <command>";
-    }
-    else {
-        map {say $_} whence(@ARGV);
-    }
-} elsif ($arg eq 'mode') {
-    if (!@ARGV) {
-        say get_brew_mode();
-    }
-    else {
-        set_brew_mode($ARGV[0]);
-        if (get_brew_mode() eq 'env') {
-            validate_shell_hook_env($ARGV[0]);
-        }
-    }
 } elsif ($arg eq 'win-run') {
     my $prog_name = shift;
     my $path = which($prog_name);
@@ -316,16 +316,16 @@ EOT
     say '';
     say "$brew_name list-available";
     say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
+    say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "$brew_name build-zef";
     say '';
     say "$brew_name exec <command> [command-args]";
     say "$brew_name which <command>";
     say "$brew_name whence [--path] <command>";
-    say "$brew_name init";
     say "$brew_name mode [env|shim]";
     say "$brew_name self-upgrade";
+    say "$brew_name init";
     say '';
-    say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
     say "$brew_name test [version|all]";
 }
 
