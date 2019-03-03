@@ -725,8 +725,15 @@ EOT
     }
     else {
         if (@_ and $_[0] eq '-') {
+            my $path = $ENV{PATH};
+            $path = clean_path($path);
+            $path = "$RealBin:$path";
+            if (get_brew_mode() eq 'env') {
+                $path = join(':', get_bin_paths(get_global_version()), $path);
+            }
+
             say <<EOT;
-export PATH=$RealBin:\$PATH
+export PATH=$path
 $brew_name() {
   eval "`command $brew_name internal_shellmod "\$@"`"
   command $brew_name "\$@"
