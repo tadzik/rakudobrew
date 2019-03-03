@@ -165,6 +165,9 @@ EOT
                 say "$brew_name: no shell-specific version configured";
             }
         }
+        else {
+            validate_shell_hook_shell($ARGV[0]);
+        }
     }
 } elsif ($arg eq 'internal_shellmod') {
 	my $command = shift // '';
@@ -242,6 +245,7 @@ EOT
     }
     else {
         set_global_version($ARGV[0]);
+        validate_shell_hook_env($ARGV[0]);
     }
 } elsif ($arg eq 'which') {
     if (!@ARGV) {
@@ -263,6 +267,9 @@ EOT
     }
     else {
         set_brew_mode($ARGV[0]);
+        if (get_brew_mode() eq 'env') {
+            validate_shell_hook_env($ARGV[0]);
+        }
     }
 } elsif ($arg eq 'win-run') {
     my $prog_name = shift;
@@ -940,6 +947,31 @@ sub validate_brew_mode {
     if (get_brew_mode() eq 'env') {
         say STDERR "This command is not available in 'env' mode. Switch to to 'shim' mode using '$brew_name mode shim'";
         exit 1;
+    }
+}
+
+sub validate_shell_hook_env {
+    if (get_brew_mode() eq 'env') {
+        my $version = shift;
+        return if !check_version($version);
+    
+        my $path = join(':', get_bin_paths($version));
+        if (index($ENV{PATH}, $path) == -1) {
+            say STDERR "The shell hook required to use rakudobrew in 'env' mode seems not to be installed.";
+            say STDERR "Run '$brew_name init' for installation instructions.";
+        }
+    }
+}
+
+sub validate_shell_hook_shell {
+    my $version = shift;
+    return if $version ne '--unset' && !check_version($version);
+    
+    if ($version eq '--unset' && exists $ENV{$env_var}
+    or $version ne '--unset' && ($ENV{$env_var} // '') ne $version) {
+    say $ENV{$env_var} . ' ' . $version;
+        say STDERR "The shell hook required to use rakudobrew in 'env' mode and use the 'shell' command seems not to be installed.";
+        say STDERR "Run '$brew_name init' for installation instructions.";
     }
 }
 
