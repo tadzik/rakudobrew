@@ -898,9 +898,12 @@ sub get_version {
     my $version = get_shell_version();
     return $version if defined $version;
     
-    # Check for local version by looking for a `.perl6-version` file in the current and parent folders.
-    $version = get_local_version();
-    return $version if defined $version;
+    if (get_brew_mode() eq 'shim') {
+        # Local version is only supported in shim mode.
+        # Check for local version by looking for a `.perl6-version` file in the current and parent folders.
+        $version = get_local_version();
+        return $version if defined $version;
+    }
 
     # Check for global version by looking at `$prefix/CURRENT` (`$prefix/version`)
     return get_global_version();
