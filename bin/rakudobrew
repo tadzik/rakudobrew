@@ -209,6 +209,8 @@ EOT
         $path = $shim_dir . ':' . $path;
         say "export PATH=$path";
     }
+} elsif ($arg eq 'internal_completions') {
+    print generate_completions(@ARGV);
 } elsif ($arg eq 'local') {
     validate_brew_mode();
     if (!@ARGV) {
@@ -718,13 +720,16 @@ EOT
     }
     else {
         if (@_ and $_[0] eq '-') {
-
             say <<EOT;
 export PATH=$RealBin:\$PATH
 $brew_name() {
   eval "`command $brew_name internal_shellmod "\$@"`"
   command $brew_name "\$@"
 }
+_${brew_name}_completions() {
+    COMPREPLY=(\$(command $brew_name internal_completions bash \$COMP_CWORD \$COMP_LINE))
+}
+complete -F _${brew_name}_completions $brew_name
 EOT
         }
         else {
@@ -739,6 +744,30 @@ echo 'eval "\$($brew_exec init -)"' >> ~/.profile
 
 EOT
         }
+    }
+}
+
+sub generate_completions {
+    my $shell = shift;
+    my $index = shift;
+    my @words = @_;
+
+    if ($index == 1) {
+        my @commands = qw(version current versions list global switch shell local nuke rehash list-available build build-zef exec which whence mode self-upgrade triple test);
+        my $candidate = @words < 2 ? '' : $words[1];
+        return join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @commands));
+    }
+    elsif($index == 2 && ($words[1] eq 'global' || $words[1] eq 'switch' || $words[1] eq 'shell' || $words[1] eq 'local' || $words[1] eq 'nuke' || $words[1] eq 'test')) {
+        my @versions = list();
+        push @versions, 'all'     if $words[1] eq 'test';
+        push @versions, '--unset' if $words[1] eq 'shell';
+        my $candidate = @words < 3 ? '' : $words[2];
+        return join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @versions));
+    }
+    elsif($index == 2 && $words[1] eq 'mode') {
+        my @modes = qw(env shim);
+        my $candidate = @words < 3 ? '' : $words[2];
+        return join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @modes));
     }
 }
 
