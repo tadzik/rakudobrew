@@ -271,7 +271,7 @@ EOT
     }
 } elsif ($arg eq 'internal_completions') {
     print generate_completions(@ARGV);
-} elsif ($arg eq 'win-run') {
+} elsif ($arg eq 'internal_win_run') {
     my $prog_name = shift;
     my $path = which($prog_name);
     # Do some filetype detection:
@@ -639,7 +639,7 @@ sub rehash {
             spurt(catfile($shim_dir, $_.'.bat'), <<EOT);
 \@ECHO OFF
 SETLOCAL
-SET brew_cmd=perl \%~dp0$brew_name win-run \%~n0
+SET brew_cmd=perl \%~dp0$brew_name internal_win_run \%~n0
 FOR /F "delims=" \%\%i IN ('\%brew_cmd\%') DO SET command=\%\%i
 IF NOT ERRORLEVEL 0 EXIT /B \%errorlevel\%
 IF     ERRORLEVEL 1 EXIT /B \%errorlevel\%
