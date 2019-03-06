@@ -366,17 +366,6 @@ sub rehash {
         opendir(my $dh, $shim_dir);
         while (my $entry = readdir $dh) {
             next if $entry =~ /^\./;
-            next unless open my $check_fh, '<', catfile($shim_dir, $entry);
-            my $is_shim;
-            LINE: while (my $line = <$check_fh>) {
-                if ($line =~ # detect self by sensible and fallback approaches
-                    /I AM RAKUDOBREW|my \$brew_name = 'rakudobrew';/
-                ) {
-                    $is_shim = 1;
-                    last LINE;
-                }
-            }
-            next unless $is_shim;
             unlink catfile($shim_dir, $entry);
         }
         closedir $dh;
