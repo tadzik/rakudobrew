@@ -471,16 +471,24 @@ EOT
                 $path = join(':', get_bin_paths(get_global_version()), $path);
             }
 
+            my $shell_cmd = $ENV{SHELL};
+            my $auto_complete = '';
+            if ($shell_cmd =~ /bash/) {
+                $auto_complete = <<"EOT";
+_${brew_name}_completions() {
+    COMPREPLY=(\$(command $brew_name internal_completions bash \$COMP_CWORD \$COMP_LINE))
+}
+complete -F _${brew_name}_completions $brew_name
+EOT
+            }
+
             say <<EOT;
 export PATH=$path
 $brew_name() {
   eval "`command $brew_name internal_shellmod "\$@"`"
   command $brew_name "\$@"
 }
-_${brew_name}_completions() {
-    COMPREPLY=(\$(command $brew_name internal_completions bash \$COMP_CWORD \$COMP_LINE))
-}
-complete -F _${brew_name}_completions $brew_name
+$auto_complete
 EOT
         }
         else {
