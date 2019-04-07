@@ -184,7 +184,7 @@ EOT
     my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
     my $name = build_triple($rakudo_ver, $nqp_ver, $moar_ver);
 
-    # Might have new executables now -> rehash.
+    # Might have new executables now -> rehash
     rehash();
     unless (get_version()) {
         set_global_version($name);
@@ -197,7 +197,7 @@ EOT
         exit 1;
     }
     build_zef($version);
-    # Might have new executables now -> rehash.
+    # Might have new executables now -> rehash
     rehash();
     say "Done, built zef for $version";
 } elsif ($arg eq 'build-panda') {
@@ -330,7 +330,7 @@ sub nuke {
         say "Nuking $matched";
         remove_tree(catdir($versions_dir, $matched));
     });
-    # Might have lost executables -> rehash.
+    # Might have lost executables -> rehash
     rehash();
 }
 
@@ -366,6 +366,8 @@ sub available_backends {
 }
 
 sub rehash {
+    return if get_brew_mode() ne 'shim';
+
     my @paths = ();
     for my $version (get_versions()) {
         push @paths, get_bin_paths($version);
