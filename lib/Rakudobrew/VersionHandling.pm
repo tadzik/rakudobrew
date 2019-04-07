@@ -268,10 +268,11 @@ sub whence {
 sub get_bin_paths {
     my $version = shift;
     my $program = scalar(shift) || undef;
+    my $version_path = get_version_path($version);
+
     return (
-        catfile($versions_dir, $version, 'install', 'bin', $program // ()),
-        catfile($versions_dir, $version, 'install', 'share', 'perl6', 'site', 'bin', $program // ()),
+        catfile($version_path, 'bin', $program // ()),
+        catfile($version_path, 'share', 'perl6', 'site', 'bin', $program // ()),
     );
 }
-
 
