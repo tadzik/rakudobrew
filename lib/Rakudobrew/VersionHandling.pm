@@ -5,6 +5,8 @@ our @EXPORT = qw(
     get_versions
     get_version
     version_exists
+    is_registered_version
+    get_version_path
     get_shell_version
     get_local_version set_local_version
     get_global_version set_global_version
@@ -24,8 +26,13 @@ use Rakudobrew::Variables;
 
 sub get_versions {
     opendir(my $dh, $versions_dir);
-    ('system', sort({ $a cmp $b } grep({/^[^.]/ && -d catdir($versions_dir, $_)
-          && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'zef' } readdir($dh))));
+    my @versions = (
+        'system',
+        sort({ $a cmp $b }
+            grep({ /^[^.]/ } readdir($dh)))
+    );
+    close($dh);
+    return @versions;
 }
 
 sub get_shell_version {
@@ -145,6 +152,26 @@ sub version_exists {
     my %versionsMap = map { $_ => 1 } get_versions();
     return exists($versionsMap{$version});
 }
+
+sub is_registered_version {
+    my $version = shift;
+    my $version_file = catdir($versions_dir, $version);
+    if (-f $version_file) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+sub get_version_path {
+    my $version = shift;
+    my $version_path = catdir($versions_dir, $version);
+    return catdir($version_path, 'install') if -d $version_path;
+    return trim(slurp($version_path))       if -f $version_path;
+    die "Invalid version found: $version";
+}
+
 
 sub which {
     my $prog = shift;

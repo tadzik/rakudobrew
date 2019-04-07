@@ -46,7 +46,13 @@ if ($arg eq 'version' || $arg eq 'current') {
     }
 } elsif ($arg eq 'versions' || $arg eq 'list') {
     my $cur = get_version() // '';
-    map { say $cur eq $_ ? "* $_" : "  $_" } get_versions();
+    map {
+        my $version_line = '';
+        $version_line .= $_ eq $cur ? '* ' : '  ';
+        $version_line .= $_;
+        $version_line .= ' -> ' . get_version_path($_) if is_registered_version($_);
+        say $version_line;
+    } get_versions();
 } elsif ($arg eq 'global' || $arg eq 'switch') {
     if (!@ARGV) {
         my $version = get_global_version();
@@ -107,7 +113,7 @@ EOT
             validate_shell_hook_env($ARGV[0]);
         });
     }
-} elsif ($arg eq 'nuke') {
+} elsif ($arg eq 'nuke' || $arg eq 'unregister') {
     my $version = shift;
     nuke($version);
 } elsif ($arg eq 'rehash') {
@@ -190,6 +196,26 @@ EOT
         set_global_version($name);
     }
     say "Done, $name built";
+} elsif ($arg eq 'register') {
+    my ($name, $path) = (shift, shift);
+    if (!$name || !$path) {
+        say STDERR "$brew_name: Need a version name and rakudo installation path";
+        exit 1;
+    }
+    if (version_exists($name)) {
+        say STDERR "$brew_name: Version $name already exists";
+        exit 1;
+    }
+
+    sub invalid() {
+        say STDERR "$brew_name: No valid rakudo installation found at '$path'";
+        exit 1;
+    }
+    invalid() if !-d $path;
+    $path = catdir($path, 'install') if !-f catfile($path, 'bin', 'perl6');
+    invalid() if !-f catdir($path, 'bin', 'perl6');
+
+    spurt(catfile($versions_dir, $name), $path);
 } elsif ($arg eq 'build-zef') {
     my $version = get_version();
     if (!$version) {
@@ -254,6 +280,8 @@ EOT
     print_shellmod_code(@ARGV);
 } elsif ($arg eq 'internal_completions') {
     print generate_completions(@ARGV);
+} elsif ($arg eq 'internal_completion_options') {
+    print generate_completion_options(@ARGV);
 } elsif ($arg eq 'internal_win_run') {
     my $prog_name = shift;
     my $path = which($prog_name, get_version());
@@ -296,12 +324,13 @@ $brew_name versions         # or $brew_name list
 $brew_name global [version] # or $brew_name switch [version]
 $brew_name shell [--unset|version]
 $brew_name local [version]
-$brew_name nuke [version]
+$brew_name nuke [version]   # or $brew_name unregister [version]
 $brew_name rehash
 
 $brew_name list-available
 $brew_name build $backends [tag|branch|sha-1] [--configure-opts=]
 $brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]
+$brew_name register <name> <path>
 $brew_name build-zef
 
 $brew_name exec <command> [command-args]
@@ -327,8 +356,14 @@ sub nuke {
     my $version = shift;
     match_and_run($version, sub {
         my $matched = shift;
-        say "Nuking $matched";
-        remove_tree(catdir($versions_dir, $matched));
+        if (is_registered_version($matched)) {
+            say "Unregistering $matched";
+            unlink(catfile($versions_dir, $matched));
+        }
+        else {
+            say "Nuking $matched";
+            remove_tree(catdir($versions_dir, $matched));
+        }
     });
     # Might have lost executables -> rehash
     rehash();
@@ -482,6 +517,7 @@ EOT
                 $auto_complete = <<"EOT";
 _${brew_name}_completions() {
     COMPREPLY=(\$(command $brew_name internal_completions bash \$COMP_CWORD \$COMP_LINE))
+    \$(command $brew_name internal_completion_options bash \$COMP_CWORD \$COMP_LINE)
 }
 complete -F _${brew_name}_completions $brew_name
 EOT
@@ -568,7 +604,7 @@ sub generate_completions {
     my @words = @_;
 
     if ($index == 1) {
-        my @commands = qw(version current versions list global switch shell local nuke rehash list-available build build-zef exec which whence mode self-upgrade triple test);
+        my @commands = qw(version current versions list global switch shell local nuke unregister rehash list-available build register build-zef exec which whence mode self-upgrade triple test);
         my $candidate = @words < 2 ? '' : $words[1];
         return join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @commands));
     }
@@ -583,6 +619,37 @@ sub generate_completions {
         my @modes = qw(env shim);
         my $candidate = @words < 3 ? '' : $words[2];
         return join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @modes));
+    }
+    elsif($index == 3 && $words[1] eq 'register') {
+        my @completions;
+
+        my $path = $words[3];
+        my ($volume, $directories, $file) = splitpath($path);
+        $path = catdir($volume, $directories, $file); # Normalize the path
+        my $basepath = catdir($volume, $directories);
+        opendir(my $dh, $basepath) or return '';
+        while (my $entry = readdir $dh) {
+            my $candidate = catdir($basepath, $entry);
+            next if $entry =~ /^\./;
+            next if substr($candidate, 0, length($path)) ne $path;
+            next if !-d $candidate;
+            $candidate .= '/' if length($candidate) > 0 && substr($candidate, -1) ne '/';
+            push @completions, $candidate;
+        }
+        closedir $dh;
+        return join(' ', @completions);
+    }
+}
+sub generate_completion_options {
+    my $shell = shift;
+    my $index = shift;
+    my @words = @_;
+
+    if($index == 3 && $words[1] eq 'register') {
+        return 'compopt -o nospace';
+    }
+    else {
+        return '';
     }
 }
 
