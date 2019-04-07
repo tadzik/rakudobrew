@@ -44,6 +44,7 @@ if ($arg eq 'version' || $arg eq 'current') {
         say STDERR "Not running anything at the moment. Use '$brew_name switch' to set a version";
         exit 1;
     }
+
 } elsif ($arg eq 'versions' || $arg eq 'list') {
     my $cur = get_version() // '';
     map {
@@ -53,6 +54,7 @@ if ($arg eq 'version' || $arg eq 'current') {
         $version_line .= ' -> ' . get_version_path($_) if is_registered_version($_);
         say $version_line;
     } get_versions();
+
 } elsif ($arg eq 'global' || $arg eq 'switch') {
     if (!@ARGV) {
         my $version = get_global_version();
@@ -69,6 +71,7 @@ if ($arg eq 'version' || $arg eq 'current') {
             validate_shell_hook_env($ARGV[0]);
         });
     }
+
 } elsif ($arg eq 'shell') {
     if ($^O =~ /win32/i) {
         say <<EOT;
@@ -96,6 +99,7 @@ EOT
             validate_shell_hook_shell($ARGV[0]);
         }
     }
+
 } elsif ($arg eq 'local') {
     validate_brew_mode();
     if (!@ARGV) {
@@ -113,12 +117,15 @@ EOT
             validate_shell_hook_env($ARGV[0]);
         });
     }
+
 } elsif ($arg eq 'nuke' || $arg eq 'unregister') {
     my $version = shift;
     nuke($version);
+
 } elsif ($arg eq 'rehash') {
     validate_brew_mode();
     rehash();
+
 } elsif ($arg eq 'list-available') {
     my ($cur_backend, $cur_rakudo) = split '-', (get_version() // ''), 2;
     $cur_backend //= '';
@@ -130,6 +137,7 @@ EOT
     $cur_rakudo |= '';
     say "Available backends:";
     map { say $cur_backend eq $_ ? "* $_" : "  $_" } available_backends();
+
 } elsif ($arg eq 'build') {
     my $impl = shift;
     my $ver = shift
@@ -186,6 +194,7 @@ EOT
         }
         say "Done, $impl-$ver built";
     }
+
 } elsif ($arg eq 'triple') {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
     my $name = build_triple($rakudo_ver, $nqp_ver, $moar_ver);
@@ -196,6 +205,7 @@ EOT
         set_global_version($name);
     }
     say "Done, $name built";
+
 } elsif ($arg eq 'register') {
     my ($name, $path) = (shift, shift);
     if (!$name || !$path) {
@@ -216,6 +226,7 @@ EOT
     invalid() if !-f catdir($path, 'bin', 'perl6');
 
     spurt(catfile($versions_dir, $name), $path);
+
 } elsif ($arg eq 'build-zef') {
     my $version = get_version();
     if (!$version) {
@@ -226,11 +237,14 @@ EOT
     # Might have new executables now -> rehash
     rehash();
     say "Done, built zef for $version";
+
 } elsif ($arg eq 'build-panda') {
     say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
+
 } elsif ($arg eq 'exec') {
     my $prog_name = shift;
     do_exec($prog_name, \@ARGV);
+
 } elsif ($arg eq 'which') {
     if (!@ARGV) {
         say STDERR "Usage: $brew_name which <command>";
@@ -243,6 +257,7 @@ EOT
         }
         map {say $_} which($ARGV[0], $version);
     }
+
 } elsif ($arg eq 'whence') {
     if (!@ARGV) {
         say STDERR "Usage: $brew_name whence [--path] <command>";
@@ -253,6 +268,7 @@ EOT
         my $prog = $pathmode ? shift : $param;
         map {say $_} whence($prog, $pathmode);
     }
+
 } elsif ($arg eq 'mode') {
     if (!@ARGV) {
         say get_brew_mode();
@@ -263,10 +279,13 @@ EOT
             validate_shell_hook_env($ARGV[0]);
         }
     }
+
 } elsif ($arg eq 'self-upgrade') {
     self_upgrade();
+
 } elsif ($arg eq 'init') {
     init(@ARGV);
+
 } elsif ($arg eq 'test') {
     my $version = shift;
     if ($version && $version eq 'all') {
@@ -276,12 +295,16 @@ EOT
     } else {
         test($version);
     }
+
 } elsif ($arg eq 'internal_shellmod') {
     print_shellmod_code(@ARGV);
+
 } elsif ($arg eq 'internal_completions') {
     print generate_completions(@ARGV);
+
 } elsif ($arg eq 'internal_completion_options') {
     print generate_completion_options(@ARGV);
+
 } elsif ($arg eq 'internal_win_run') {
     my $prog_name = shift;
     my $path = which($prog_name, get_version());
@@ -315,6 +338,7 @@ EOT
             say $path;
         }
     }
+
 } else {
     my $backends = join '|', available_backends(), 'all';
     say <<"EOT";
