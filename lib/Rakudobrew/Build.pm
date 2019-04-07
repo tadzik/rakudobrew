@@ -1,7 +1,7 @@
 package Rakudobrew::Build;
 require Exporter;
 our @ISA = qw( Exporter );
-our @EXPORT = qw(build_impl make build_triple build_zef);
+our @EXPORT = qw(available_rakudos build_impl make build_triple build_zef);
 
 use strict;
 use warnings;
@@ -12,9 +12,15 @@ use Rakudobrew::Tools;
 use Rakudobrew::VersionHandling;
 use Rakudobrew::Variables;
 
+sub available_rakudos {
+    my @output = qx|$GIT ls-remote --tags $git_repos{rakudo}|;
+    my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
+    return sort grep { /^[\dv]/ } map(m{tags/([^\^]+)\^}, @tags);
+}
+
 sub build_impl {
     my ($impl, $ver, $configure_opts) = @_;
-    $ver //= 'master';
+
     chdir $versions_dir;
     unless (-d "$impl-$ver") {
         for(@{$impls{$impl}{need_repo}}) {

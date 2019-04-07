@@ -139,16 +139,17 @@ EOT
     map { say $cur_backend eq $_ ? "* $_" : "  $_" } available_backends();
 
 } elsif ($arg eq 'build') {
-    my $impl = shift;
+    my $impl = shift // 'moar';
     my $ver = shift
         if @ARGV && $ARGV[0] !~ /^--/;
 
-    if (!defined $impl) {
-        say "Build what?";
-        my ($cur) = split '-', (get_version() // ''), 2;
-        $cur //= '';
-        map { say $cur eq $_ ? "* $_" : "  $_" } available_backends();
-    } elsif ($impl eq "panda") {
+    if (!defined $ver) {
+        my @versions = available_rakudos();
+        @versions = grep { /^\d\d\d\d\.\d\d/ } @versions;
+        $ver = $versions[-1];
+    }
+
+    if ($impl eq "panda") {
         say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
     } elsif ($impl eq "zef") {
         my $version = get_version();
@@ -352,7 +353,7 @@ $brew_name nuke [version]   # or $brew_name unregister [version]
 $brew_name rehash
 
 $brew_name list-available
-$brew_name build $backends [tag|branch|sha-1] [--configure-opts=]
+$brew_name build [$backends] [tag|branch|sha-1] [--configure-opts=]
 $brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]
 $brew_name register <name> <path>
 $brew_name build-zef
@@ -369,12 +370,6 @@ EOT
 }
 
 exit;
-
-sub available_rakudos {
-    my @output = qx|$GIT ls-remote --tags $git_repos{rakudo}|;
-    my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
-    return sort grep { /^[\dv]/ } map(m{tags/([^\^]+)\^}, @tags);
-}
 
 sub nuke {
     my $version = shift;
