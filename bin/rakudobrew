@@ -543,12 +543,20 @@ EOT
             }
 
             say <<EOT;
-export PATH=$path
-$brew_name() {
-  eval "`command $brew_name internal_shellmod "\$@"`"
-  command $brew_name "\$@"
-}
-$auto_complete
+if [ -v BASH_VERSION ] ; then
+    export PATH=$path
+    $brew_name() {
+      eval "`command $brew_name internal_shellmod "\$@"`"
+      command $brew_name "\$@"
+    }
+    $auto_complete
+else
+    export PATH=$path
+    $brew_name() {
+      eval "`command $brew_name internal_shellmod "\$@"`"
+      command $brew_name "\$@"
+    }
+fi
 EOT
         }
         else {
