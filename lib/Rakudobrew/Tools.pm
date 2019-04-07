@@ -54,7 +54,7 @@ sub slurp_dir {
     while (my $entry = readdir $dh) {
         next if $entry =~ /^\./;
         next if !-f catfile($name, $entry);
-        push @ret, $entry
+        push @ret, $entry;
     }
     closedir $dh;
     return @ret;
