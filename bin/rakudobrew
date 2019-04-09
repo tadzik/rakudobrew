@@ -533,7 +533,9 @@ EOT
             $path = clean_path($path);
             $path = "$RealBin:$path";
             if (get_brew_mode() eq 'env') {
-                $path = join(':', get_bin_paths(get_global_version()), $path);
+                if (get_global_version()) {
+                    $path = join(':', get_bin_paths(get_global_version()), $path);
+                }
             }
 
             my $shell_cmd = $ENV{SHELL};
@@ -602,7 +604,7 @@ sub print_shellmod_code {
         if ($command eq 'global'
         or  $command eq 'switch'
         or  $command eq 'shell') {
-            if (@ARGV) {
+            if (@params) {
                 if ($params[0] eq '--unset') {
                     $version = get_global_version();
                 }
