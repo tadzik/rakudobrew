@@ -385,6 +385,9 @@ sub nuke {
             say "Unregistering $matched";
             unlink(catfile($versions_dir, $matched));
         }
+        elsif ($matched eq 'system') {
+            say 'I refuse to nuke system Perl 6!';
+        }
         else {
             say "Nuking $matched";
             remove_tree(catdir($versions_dir, $matched));
