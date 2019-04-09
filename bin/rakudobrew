@@ -433,7 +433,9 @@ sub rehash {
 
     my @paths = ();
     for my $version (get_versions()) {
-        push @paths, get_bin_paths($version);
+        if ($version ne 'system') {
+            push @paths, get_bin_paths($version);
+        }
     }
 
     say "Updating shims";
@@ -536,7 +538,7 @@ EOT
             $path = clean_path($path);
             $path = "$RealBin:$path";
             if (get_brew_mode() eq 'env') {
-                if (get_global_version()) {
+                if (get_global_version() && get_global_version() ne 'system') {
                     $path = join(':', get_bin_paths(get_global_version()), $path);
                 }
             }
@@ -745,6 +747,7 @@ sub validate_shell_hook_env {
     if (get_brew_mode() eq 'env') {
         my $version = shift;
         return if !version_exists($version);
+        return if $version eq 'system';
     
         my $path = join(':', get_bin_paths($version));
         if (index($ENV{PATH}, $path) == -1) {
