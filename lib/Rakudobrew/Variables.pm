@@ -17,7 +17,7 @@ our $local_filename = '.perl6-version';
 our $prefix = catdir($RealBin, updir());
 our $versions_dir = catdir($prefix, 'versions');
 our $shim_dir = catdir($prefix, 'shims');
-our $git_reference = catfile($prefix, 'git_reference');
+our $git_reference = catdir($prefix, 'git_reference');
 
 our $GIT       = $ENV{GIT_BINARY} // 'git';
 our $GIT_PROTO = $ENV{GIT_PROTOCOL} // 'git';
