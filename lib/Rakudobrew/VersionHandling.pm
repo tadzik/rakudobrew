@@ -10,7 +10,7 @@ our @EXPORT = qw(
     get_shell_version
     get_local_version set_local_version
     get_global_version set_global_version
-    set_brew_mode get_brew_mode validate_brew_mode
+    set_brew_mode get_brew_mode get_brew_mode_shell validate_brew_mode
     which whence
     get_bin_paths
 );
@@ -127,6 +127,28 @@ sub set_brew_mode {
     else {
         say STDERR "Mode must either be 'env' or 'shim'";
     }
+}
+
+sub get_brew_mode_shell {
+    # Used in the shell hook to set the PATH correctly prior
+    # to the normal rakudobrew invocation.
+    my $mode = shift;
+    if (!$mode) {
+        if (!-e catfile($prefix, 'MODE')) {
+            $mode = ($^O =~ /win32/i ? 'shim' : 'env');
+        }
+        else {
+            $mode = trim(slurp(catfile($prefix, 'MODE')));
+        }
+    }
+    if ($^O =~ /win32/i && $mode eq 'env') {
+        $mode = 'shim';
+    }
+    elsif ($mode ne 'env' && $mode ne 'shim') {
+        $mode = 'env';
+    }
+
+    return $mode;
 }
 
 sub get_brew_mode {

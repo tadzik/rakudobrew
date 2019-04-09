@@ -593,45 +593,56 @@ sub print_shellmod_code {
          && $command ne 'shell'
          && $command ne 'mode';
 
-    if ($command eq 'shell' && @params) {
-        if ($params[0] eq '--unset') {
-            say get_shell_unsetter_code();
-        }
-        else {
-            say get_shell_setter_code($params[0]);
-        }
-    }
+    # The shell hook is called before the normal rakudobrew invocation.
+    # Thus the brew mode is not yet switched at this point.
+    my $mode = get_brew_mode_shell($command eq 'mode' ? shift : undef);
 
-    if (get_brew_mode() eq 'env') {
-        my $version;
-        if ($command eq 'global'
-        or  $command eq 'switch'
-        or  $command eq 'shell') {
-            if (@params) {
-                if ($params[0] eq '--unset') {
-                    $version = get_global_version();
-                }
-                else {
-                    match_and_run($params[0], sub {
-                        $version = $params[0];
-                    });
-                }
+    if ($mode eq 'shim') {
+        if ($command eq 'shell' && @params) {
+            if ($params[0] eq '--unset') {
+                say get_shell_unsetter_code();
+            }
+            else {
+                say get_shell_setter_code($params[0]);
             }
         }
-
-        exit if !defined $version;
-        if ($command eq 'shell'
-        or ($command eq 'global' || $command eq 'switch') && !defined get_shell_version()) {
+        elsif ($command eq 'mode') { # just switched to shim mode
             my $path = $ENV{PATH};
             $path = clean_path($path);
-            $path = join(':', get_bin_paths($version), $path);
+            $path = $shim_dir . ':' . $path;
             say "export PATH=$path";
         }
     }
-    elsif ($command eq 'mode') { # get_brew_mode() eq 'shim'
+    else { # get_brew_mode() eq 'env'
+        my $version;
+        if ($command eq 'global'
+        ||  $command eq 'switch'
+        ||  $command eq 'shell'
+        and @params) {
+            if ($command eq 'shell' && $params[0] eq '--unset') {
+                $version = get_global_version();
+            }
+            elsif (!defined get_shell_version() && ($command eq 'global' || $command eq 'switch')) {
+                $version = get_version();
+            }
+            else {
+                match_and_run($params[0], sub {
+                    $version = $params[0];
+                });
+            }
+
+            # If the version isn't defined here we don't need to modify PATH.
+            return if !defined $version;
+        }
+        else { # $command eq 'mode' && $mode
+            $version = get_version();
+        }
+
         my $path = $ENV{PATH};
         $path = clean_path($path);
-        $path = $shim_dir . ':' . $path;
+        if ($version ne 'system') {
+            $path = join(':', get_bin_paths($version), $path);
+        }
         say "export PATH=$path";
     }
 }
