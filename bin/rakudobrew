@@ -21,6 +21,12 @@ unless (-d $shim_dir) {
     exit 1;
 }
 
+unless (-d $shim_dir) {
+    mkdir $shim_dir;
+}
+unless (-d $versions_dir) {
+    mkdir $versions_dir;
+}
 unless (-d $git_reference) {
     mkdir $git_reference;
 }
