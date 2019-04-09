@@ -14,7 +14,7 @@ use Rakudobrew::Tools;
 use Rakudobrew::Variables;
 
 # Detect incompatible version upgrade and notify user of the breakage.
-unless (-d $shim_dir) {
+unless (-d catdir($prefix, 'lib')) {
     say STDERR "You seem to have upgraded rakudobrew to a newer version not compatible with";
     say STDERR "your current directory layout. Please remove rakudobrew completely by";
     say STDERR "removing $prefix and installing again.";
