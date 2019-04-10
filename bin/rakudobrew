@@ -387,6 +387,7 @@ sub nuke {
         }
         elsif ($matched eq 'system') {
             say 'I refuse to nuke system Perl 6!';
+            exit 1;
         }
         else {
             say "Nuking $matched";
