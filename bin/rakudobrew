@@ -670,6 +670,16 @@ sub generate_completions {
         my $candidate = @words < 3 ? '' : $words[2];
         return join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @versions));
     }
+    elsif($index == 2 && $words[1] eq 'build') {
+        return join ' ', available_backends(), 'all';
+    }
+    elsif($index == 3 && $words[1] eq 'build') {
+        my @installed = get_versions();
+        my @installables = grep({ my $x = $_; !grep({ $x eq $_ } @installed) } available_rakudos());
+
+        my $candidate = @words < 4 ? '' : $words[3];
+        return join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @installables));
+    }
     elsif($index == 2 && $words[1] eq 'mode') {
         my @modes = qw(env shim);
         my $candidate = @words < 3 ? '' : $words[2];
