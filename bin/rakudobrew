@@ -543,6 +543,9 @@ EOT
                     $path = join(':', get_bin_paths(get_global_version()), $path);
                 }
             }
+            else { # get_brew_mode() eq 'shim'
+                $path = join(':', $shim_dir, $path);
+            }
 
             my $shell_cmd = $ENV{SHELL};
             my $auto_complete = '';
@@ -598,7 +601,7 @@ sub print_shellmod_code {
 
     # The shell hook is called before the normal rakudobrew invocation.
     # Thus the brew mode is not yet switched at this point.
-    my $mode = get_brew_mode_shell($command eq 'mode' ? shift : undef);
+    my $mode = get_brew_mode_shell($command eq 'mode' ? shift(@params) : undef);
 
     if ($mode eq 'shim') {
         if ($command eq 'shell' && @params) {
