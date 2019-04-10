@@ -628,10 +628,8 @@ sub print_shellmod_code {
             if ($command eq 'shell' && $params[0] eq '--unset') {
                 $version = get_global_version();
             }
-            elsif (!defined get_shell_version() && ($command eq 'global' || $command eq 'switch')) {
-                $version = get_version();
-            }
-            else {
+            elsif ($command eq 'shell'
+            || !defined get_shell_version() && ($command eq 'global' || $command eq 'switch')) {
                 match_and_run($params[0], sub {
                     $version = $params[0];
                 });
