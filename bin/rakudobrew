@@ -491,10 +491,10 @@ EOT
         }
         else {
             my @available_shell_hooks;
-            opendir(my $dh, catdir($prefix, updir(), 'lib', 'Rakudobrew', 'ShellHook')) or die '$brew_name: Lib dir not found';
+            opendir(my $dh, catdir($prefix, 'lib', 'Rakudobrew', 'ShellHook')) or die "$brew_name: lib dir not found";
             while (my $entry = readdir $dh) {
-                if ($entry =~ /\.pm$/) {
-                    push @available_shell_hooks, $entry;
+                if ($entry =~ /(.*)\.pm$/) {
+                    push @available_shell_hooks, $1;
                 }
             }
             closedir $dh;
