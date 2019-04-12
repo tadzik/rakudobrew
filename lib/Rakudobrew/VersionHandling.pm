@@ -146,13 +146,13 @@ sub get_brew_mode {
     if ($^O =~ /win32/i && $mode eq 'env') {
         say STDERR 'env-mode is not supported on Windows' unless $silent;
         say STDERR 'Resetting to shim-mode'               unless $silent;
-        spurt(catfile($prefix, 'MODE'), 'shim');
+        set_brew_mode('shim');
         $mode = 'shim';
     }
     elsif ($mode ne 'env' && $mode ne 'shim') {
         say STDERR 'Invalid mode found: ' . $mode unless $silent;
         say STDERR 'Resetting to env-mode'        unless $silent;
-        spurt(catfile($prefix, 'MODE'), 'env');
+        set_brew_mode('env');
         $mode = 'env';
     }
 
