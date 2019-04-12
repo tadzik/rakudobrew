@@ -13,6 +13,7 @@ our @EXPORT = qw(
     set_brew_mode get_brew_mode get_brew_mode_shell validate_brew_mode
     which whence
     get_bin_paths
+    rehash
 );
 
 use strict;
@@ -21,8 +22,8 @@ use 5.010;
 use File::Spec::Functions qw(catfile catdir splitdir splitpath catpath);
 use Cwd qw(realpath);
 use File::Which qw();
-use Rakudobrew::Tools;
 use Rakudobrew::Variables;
+use Rakudobrew::Tools;
 
 sub get_versions {
     opendir(my $dh, $versions_dir);
@@ -81,19 +82,18 @@ sub set_local_version {
 }
 
 sub get_global_version {
-    if (-e catdir($prefix, 'CURRENT')) {
-        my $cur = slurp(catfile($prefix, 'CURRENT'));
-        chomp $cur;
-        return $cur;
+    if (!-e catfile($prefix, 'CURRENT')) {
+        set_global_version('system', 1);
     }
-    else {
-        return undef;
-    }
+    my $cur = slurp(catfile($prefix, 'CURRENT'));
+    chomp $cur;
+    return $cur;
 }
 
 sub set_global_version {
     my $version = shift;
-    say "Switching to $version";
+    my $silent = shift;
+    say "Switching to $version" unless $silent;
     spurt(catfile($prefix, 'CURRENT'), $version);
 }
 
@@ -129,29 +129,8 @@ sub set_brew_mode {
     }
 }
 
-sub get_brew_mode_shell {
-    # Used in the shell hook to set the PATH correctly prior
-    # to the normal rakudobrew invocation.
-    my $mode = shift;
-    if (!$mode) {
-        if (!-e catfile($prefix, 'MODE')) {
-            $mode = ($^O =~ /win32/i ? 'shim' : 'env');
-        }
-        else {
-            $mode = trim(slurp(catfile($prefix, 'MODE')));
-        }
-    }
-    if ($^O =~ /win32/i && $mode eq 'env') {
-        $mode = 'shim';
-    }
-    elsif ($mode ne 'env' && $mode ne 'shim') {
-        $mode = 'env';
-    }
-
-    return $mode;
-}
-
 sub get_brew_mode {
+    my $silent = shift;
     if (!-e catfile($prefix, 'MODE')) {
         if ($^O =~ /win32/i) {
             spurt(catfile($prefix, 'MODE'), 'shim');
@@ -164,14 +143,14 @@ sub get_brew_mode {
     my $mode = trim(slurp(catfile($prefix, 'MODE')));
 
     if ($^O =~ /win32/i && $mode eq 'env') {
-        say STDERR 'env-mode is not supported on Windows';
-        say STDERR 'Resetting to shim-mode';
+        say STDERR 'env-mode is not supported on Windows' unless $silent;
+        say STDERR 'Resetting to shim-mode'               unless $silent;
         spurt(catfile($prefix, 'MODE'), 'shim');
         $mode = 'shim';
     }
     elsif ($mode ne 'env' && $mode ne 'shim') {
-        say STDERR 'Invalid mode found: ' . $mode;
-        say STDERR 'Resetting to env-mode';
+        say STDERR 'Invalid mode found: ' . $mode unless $silent;
+        say STDERR 'Resetting to env-mode'        unless $silent;
         spurt(catfile($prefix, 'MODE'), 'env');
         $mode = 'env';
     }
@@ -316,3 +295,51 @@ sub get_bin_paths {
     );
 }
 
+sub rehash {
+    return if get_brew_mode() ne 'shim';
+
+    my @paths = ();
+    for my $version (get_versions()) {
+        if ($version ne 'system') {
+            push @paths, get_bin_paths($version);
+        }
+    }
+
+    say "Updating shims";
+
+    { # Remove the existing shims.
+        opendir(my $dh, $shim_dir);
+        while (my $entry = readdir $dh) {
+            next if $entry =~ /^\./;
+            unlink catfile($shim_dir, $entry);
+        }
+        closedir $dh;
+    }
+
+    my @bins = map { slurp_dir($_) } @paths;
+
+    if ($^O =~ /win32/i) {
+        # This wrapper is needed because:
+        # - We want rakudobrew to work even when the .pl ending is not associated with the perl program and we do not want to put `perl` before every call to a shim.
+        # - exec() in perl on Windows behaves differently from running the target program directly (output ends up on the console differently).
+        # It retrieves the target executable (only consuming STDOUT of rakudobrew) and calls it with the given arguments. STDERR still ends up on the console. The return value is checked and if an error occurs that error values is returned.
+        @bins = map { my ($basename, undef, undef) = my_fileparse($_); $basename } @bins;
+        @bins = uniq(@bins);
+        for (@bins) {
+            spurt(catfile($shim_dir, $_.'.bat'), <<EOT);
+\@ECHO OFF
+SETLOCAL
+SET brew_cmd=perl \%~dp0$brew_name internal_win_run \%~n0
+FOR /F "delims=" \%\%i IN ('\%brew_cmd\%') DO SET command=\%\%i
+IF NOT ERRORLEVEL 0 EXIT /B \%errorlevel\%
+IF     ERRORLEVEL 1 EXIT /B \%errorlevel\%
+\%command\% \%*
+EOT
+        }
+    }
+    else {
+        for (@bins) {
+            link $0, catfile($shim_dir, $_);
+        }
+    }
+}

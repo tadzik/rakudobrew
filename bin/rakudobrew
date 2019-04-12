@@ -8,10 +8,10 @@ use lib "$RealBin/../lib";
 use File::Path qw(remove_tree);
 use File::Spec::Functions qw(catfile catdir splitpath updir);
 
-use Rakudobrew::Build;
-use Rakudobrew::VersionHandling;
-use Rakudobrew::Tools;
 use Rakudobrew::Variables;
+use Rakudobrew::Tools;
+use Rakudobrew::VersionHandling;
+use Rakudobrew::Build;
 
 # Detect incompatible version upgrade and notify user of the breakage.
 unless (-d catdir($prefix, 'lib')) {
@@ -40,6 +40,21 @@ unless (-d $git_reference) {
         do_exec($prog_name, \@ARGV);
     }
 }
+
+if (@ARGV && $ARGV[0] eq 'internal_hooked') { # The hook is there, all good!
+    shift; # Remove the hook so processing code below doesn't need to care about it.
+}
+elsif ($ARGV[0] =~ /^internal_/  # It's an internal_ method, all good!
+|| !@ARGV || $ARGV[0] eq 'init') # We don't want to annoy the user with missing
+                                 # hook messages if she might not have even completed
+                                 # the installation process.
+{}
+elsif (get_brew_mode() eq 'env' || @ARGV && $ARGV[0] eq 'shell' || @ARGV >= 2 && $ARGV[0] eq 'mode' && $ARGV[1] eq 'env') {
+    say STDERR "The shell hook required to use rakudobrew in 'env' mode and use the 'shell' command seems not to be installed.";
+    say STDERR "Run '$brew_name init' for installation instructions.";
+    exit 1;
+}
+
 
 my $arg = shift // 'help';
 
@@ -74,7 +89,6 @@ if ($arg eq 'version' || $arg eq 'current') {
     else {
         match_and_run($ARGV[0], sub {
             set_global_version(shift);
-            validate_shell_hook_env($ARGV[0]);
         });
     }
 
@@ -102,7 +116,11 @@ EOT
             }
         }
         else {
-            validate_shell_hook_shell($ARGV[0]);
+            my $version = shift;
+            if ($version ne '--unset' && !version_exists($version)) {
+                say STDERR "$brew_name: version '$version' not installed.";
+                exit 1;
+            }
         }
     }
 
@@ -120,13 +138,12 @@ EOT
     else {
         match_and_run($ARGV[0], sub {
             set_local_version(shift);
-            validate_shell_hook_env($ARGV[0]);
         });
     }
 
 } elsif ($arg eq 'nuke' || $arg eq 'unregister') {
     my $version = shift;
-    nuke($version);
+    Rakudobrew::Build::nuke($version);
 
 } elsif ($arg eq 'rehash') {
     validate_brew_mode();
@@ -137,7 +154,7 @@ EOT
     $cur_backend //= '';
     $cur_rakudo  //= '';
     say "Available Rakudo versions:";
-    map { say $cur_rakudo eq $_ ? "* $_" : "  $_" } available_rakudos();
+    map { say $cur_rakudo eq $_ ? "* $_" : "  $_" } Rakudobrew::Build::available_rakudos();
     say "";
     $cur_backend |= '';
     $cur_rakudo |= '';
@@ -150,7 +167,7 @@ EOT
         if @ARGV && $ARGV[0] !~ /^--/;
 
     if (!defined $ver) {
-        my @versions = available_rakudos();
+        my @versions = Rakudobrew::Build::available_rakudos();
         @versions = grep { /^\d\d\d\d\.\d\d/ } @versions;
         $ver = $versions[-1];
     }
@@ -163,7 +180,7 @@ EOT
             say STDERR "$brew_name: No version set.";
             exit 1;
         }
-        build_zef($version);
+        Rakudobrew::Build::build_zef($version);
         # Might have new executables now -> rehash.
         rehash();
         say "Done, built zef for $version";
@@ -188,10 +205,10 @@ EOT
 
         if ($impl && $impl eq 'all') {
             for (available_backends()) {
-                build_impl($_, $ver, $configure_opts);
+                Rakudobrew::Build::build_impl($_, $ver, $configure_opts);
             }
         } else {
-            build_impl($impl, $ver, $configure_opts);
+            Rakudobrew::Build::build_impl($impl, $ver, $configure_opts);
         }
 
         # Might have new executables now -> rehash.
@@ -204,7 +221,7 @@ EOT
 
 } elsif ($arg eq 'triple') {
     my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
-    my $name = build_triple($rakudo_ver, $nqp_ver, $moar_ver);
+    my $name = Rakudobrew::Build::build_triple($rakudo_ver, $nqp_ver, $moar_ver);
 
     # Might have new executables now -> rehash
     rehash();
@@ -240,7 +257,7 @@ EOT
         say STDERR "$brew_name: No version set.";
         exit 1;
     }
-    build_zef($version);
+    Rakudobrew::Build::build_zef($version);
     # Might have new executables now -> rehash
     rehash();
     say "Done, built zef for $version";
@@ -282,9 +299,6 @@ EOT
     }
     else {
         set_brew_mode($ARGV[0]);
-        if (get_brew_mode() eq 'env') {
-            validate_shell_hook_env($ARGV[0]);
-        }
     }
 
 } elsif ($arg eq 'self-upgrade') {
@@ -302,15 +316,13 @@ EOT
     } else {
         test($version);
     }
+} elsif ($arg eq 'internal_shell_hook') {
+    no strict 'refs';
+    my $shell = shift;
+    my $sub = shift;
 
-} elsif ($arg eq 'internal_shellmod') {
-    print_shellmod_code(@ARGV);
-
-} elsif ($arg eq 'internal_completions') {
-    print generate_completions(@ARGV);
-
-} elsif ($arg eq 'internal_completion_options') {
-    print generate_completion_options(@ARGV);
+    eval "require Rakudobrew::ShellHook::$shell";
+    "Rakudobrew::ShellHook::${shell}::$sub"->(@ARGV);
 
 } elsif ($arg eq 'internal_win_run') {
     my $prog_name = shift;
@@ -377,27 +389,6 @@ EOT
 
 exit;
 
-sub nuke {
-    my $version = shift;
-    match_and_run($version, sub {
-        my $matched = shift;
-        if (is_registered_version($matched)) {
-            say "Unregistering $matched";
-            unlink(catfile($versions_dir, $matched));
-        }
-        elsif ($matched eq 'system') {
-            say 'I refuse to nuke system Perl 6!';
-            exit 1;
-        }
-        else {
-            say "Nuking $matched";
-            remove_tree(catdir($versions_dir, $matched));
-        }
-    });
-    # Might have lost executables -> rehash
-    rehash();
-}
-
 sub match_and_run {
     my ($version, $action) = @_;
     if (!$version) {
@@ -429,55 +420,6 @@ sub available_backends {
     map {$_->{name}} sort {$a->{weight} <=> $b->{weight}} values %impls;
 }
 
-sub rehash {
-    return if get_brew_mode() ne 'shim';
-
-    my @paths = ();
-    for my $version (get_versions()) {
-        if ($version ne 'system') {
-            push @paths, get_bin_paths($version);
-        }
-    }
-
-    say "Updating shims";
-
-    { # Remove the existing shims.
-        opendir(my $dh, $shim_dir);
-        while (my $entry = readdir $dh) {
-            next if $entry =~ /^\./;
-            unlink catfile($shim_dir, $entry);
-        }
-        closedir $dh;
-    }
-
-    my @bins = map { slurp_dir($_) } @paths;
-
-    if ($^O =~ /win32/i) {
-        # This wrapper is needed because:
-        # - We want rakudobrew to work even when the .pl ending is not associated with the perl program and we do not want to put `perl` before every call to a shim.
-        # - exec() in perl on Windows behaves differently from running the target program directly (output ends up on the console differently).
-        # It retrieves the target executable (only consuming STDOUT of rakudobrew) and calls it with the given arguments. STDERR still ends up on the console. The return value is checked and if an error occurs that error values is returned.
-        @bins = map { my ($basename, undef, undef) = my_fileparse($_); $basename } @bins;
-        @bins = uniq(@bins);
-        for (@bins) {
-            spurt(catfile($shim_dir, $_.'.bat'), <<EOT);
-\@ECHO OFF
-SETLOCAL
-SET brew_cmd=perl \%~dp0$brew_name internal_win_run \%~n0
-FOR /F "delims=" \%\%i IN ('\%brew_cmd\%') DO SET command=\%\%i
-IF NOT ERRORLEVEL 0 EXIT /B \%errorlevel\%
-IF     ERRORLEVEL 1 EXIT /B \%errorlevel\%
-\%command\% \%*
-EOT
-        }
-    }
-    else {
-        for (@bins) {
-            link $0, catfile($shim_dir, $_);
-        }
-    }
-}
-
 sub self_upgrade {
     chdir $prefix;
     run "$GIT pull";
@@ -500,7 +442,7 @@ sub test {
     if ($matched and not $ambiguous) {
         say "Spectesting $matched";
         chdir catdir($versions_dir, $matched);
-        make('spectest');
+        Rakudobrew::Build::make('spectest');
     } elsif (@match) {
         say "Sorry, I'm not sure if you mean:";
         say $_ for @match;
@@ -534,253 +476,41 @@ sub init {
 EOT
     }
     else {
-        if (@_ and $_[0] eq '-') {
-            my $path = $ENV{PATH};
-            $path = clean_path($path, $RealBin);
-            $path = "$RealBin:$path";
-            if (get_brew_mode() eq 'env') {
-                if (get_global_version() && get_global_version() ne 'system') {
-                    $path = join(':', get_bin_paths(get_global_version()), $path);
+        if (@_) {
+            no strict 'refs';
+            my $shell = $_[0];
+            
+            eval "require Rakudobrew::ShellHook::$shell";
+            
+            if ($@) {
+                say STDERR "Couldn't find shell hook implementation for shell '$shell'.";
+                exit 1;
+            }
+            my $code = "Rakudobrew::ShellHook::${shell}::get_init_code";
+            say $code->();
+        }
+        else {
+            my @available_shell_hooks;
+            opendir(my $dh, catdir($prefix, updir(), 'lib', 'Rakudobrew', 'ShellHook')) or die '$brew_name: Lib dir not found';
+            while (my $entry = readdir $dh) {
+                if ($entry =~ /\.pm$/) {
+                    push @available_shell_hooks, $entry;
                 }
             }
-            else { # get_brew_mode() eq 'shim'
-                $path = join(':', $shim_dir, $path);
-            }
+            closedir $dh;
+            my $available_shell_hooks_text = join('|', @available_shell_hooks);
 
-            my $shell_cmd = $ENV{SHELL};
-            my $auto_complete = '';
-            if ($shell_cmd =~ /bash/) {
-                $auto_complete = <<"EOT";
-_${brew_name}_completions() {
-    COMPREPLY=(\$(command $brew_name internal_completions bash \$COMP_CWORD \$COMP_LINE))
-    \$(command $brew_name internal_completion_options bash \$COMP_CWORD \$COMP_LINE)
-}
-complete -F _${brew_name}_completions $brew_name
-EOT
-            }
-
-            say <<EOT;
-if [ -v BASH_VERSION ] ; then
-    export PATH=$path
-    $brew_name() {
-      eval "`command $brew_name internal_shellmod "\$@"`"
-      command $brew_name "\$@"
-    }
-    $auto_complete
-else
-    export PATH=$path
-    $brew_name() {
-      eval "`command $brew_name internal_shellmod "\$@"`"
-      command $brew_name "\$@"
-    }
-fi
-EOT
-        }
-        else {
             say <<EOT;
 # Load $brew_name automatically by adding
-#   eval "\$($brew_exec init -)"
+#   eval "\$($brew_exec init <$available_shell_hooks_text>)"
 # to your local profile file.
-# (often ~/.bash_profile or ~/.profile)
+# (often ~/.bash_profile, ~/.zsh_profile or ~/.profile)
 # This can be easily done using:
 
-echo 'eval "\$($brew_exec init -)"' >> ~/.profile
+echo 'eval "\$($brew_exec init <$available_shell_hooks_text>)"' >> ~/.profile
 
 EOT
         }
-    }
-}
-
-sub print_shellmod_code {
-    my @params = @_;
-	my $command = shift(@params) // '';
-	exit if $command ne 'global'
-         && $command ne 'switch'
-         && $command ne 'shell'
-         && $command ne 'mode';
-
-    # The shell hook is called before the normal rakudobrew invocation.
-    # Thus the brew mode is not yet switched at this point.
-    my $mode = get_brew_mode_shell($command eq 'mode' ? shift(@params) : undef);
-
-    if ($mode eq 'shim') {
-        if ($command eq 'shell' && @params) {
-            if ($params[0] eq '--unset') {
-                say get_shell_unsetter_code();
-            }
-            else {
-                say get_shell_setter_code($params[0]);
-            }
-        }
-        elsif ($command eq 'mode') { # just switched to shim mode
-            my $path = $ENV{PATH};
-            $path = clean_path($path);
-            $path = $shim_dir . ':' . $path;
-            say "export PATH=$path";
-        }
-    }
-    else { # get_brew_mode() eq 'env'
-        my $version;
-        if ($command eq 'global'
-        ||  $command eq 'switch'
-        ||  $command eq 'shell'
-        and @params) {
-            if ($command eq 'shell' && $params[0] eq '--unset') {
-                $version = get_global_version();
-            }
-            elsif ($command eq 'shell'
-            || !defined get_shell_version() && ($command eq 'global' || $command eq 'switch')) {
-                match_and_run($params[0], sub {
-                    $version = $params[0];
-                });
-            }
-
-            # If the version isn't defined here we don't need to modify PATH.
-            return if !defined $version;
-        }
-        else { # $command eq 'mode' && $mode
-            $version = get_version();
-        }
-
-        my $path = $ENV{PATH};
-        $path = clean_path($path);
-        if ($version ne 'system') {
-            $path = join(':', get_bin_paths($version), $path);
-        }
-        say "export PATH=$path";
-    }
-}
-
-sub generate_completions {
-    my $shell = shift;
-    my $index = shift;
-    my @words = @_;
-
-    if ($index == 1) {
-        my @commands = qw(version current versions list global switch shell local nuke unregister rehash list-available build register build-zef exec which whence mode self-upgrade triple test);
-        my $candidate = @words < 2 ? '' : $words[1];
-        return join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @commands));
-    }
-    elsif($index == 2 && ($words[1] eq 'global' || $words[1] eq 'switch' || $words[1] eq 'shell' || $words[1] eq 'local' || $words[1] eq 'nuke' || $words[1] eq 'test')) {
-        my @versions = get_versions();
-        push @versions, 'all'     if $words[1] eq 'test';
-        push @versions, '--unset' if $words[1] eq 'shell';
-        my $candidate = @words < 3 ? '' : $words[2];
-        return join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @versions));
-    }
-    elsif($index == 2 && $words[1] eq 'build') {
-        return join ' ', available_backends(), 'all';
-    }
-    elsif($index == 3 && $words[1] eq 'build') {
-        my @installed = get_versions();
-        my @installables = grep({ my $x = $_; !grep({ $x eq $_ } @installed) } available_rakudos());
-
-        my $candidate = @words < 4 ? '' : $words[3];
-        return join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @installables));
-    }
-    elsif($index == 2 && $words[1] eq 'mode') {
-        my @modes = qw(env shim);
-        my $candidate = @words < 3 ? '' : $words[2];
-        return join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @modes));
-    }
-    elsif($index == 3 && $words[1] eq 'register') {
-        my @completions;
-
-        my $path = $words[3];
-        my ($volume, $directories, $file) = splitpath($path);
-        $path = catdir($volume, $directories, $file); # Normalize the path
-        my $basepath = catdir($volume, $directories);
-        opendir(my $dh, $basepath) or return '';
-        while (my $entry = readdir $dh) {
-            my $candidate = catdir($basepath, $entry);
-            next if $entry =~ /^\./;
-            next if substr($candidate, 0, length($path)) ne $path;
-            next if !-d $candidate;
-            $candidate .= '/' if length($candidate) > 0 && substr($candidate, -1) ne '/';
-            push @completions, $candidate;
-        }
-        closedir $dh;
-        return join(' ', @completions);
-    }
-}
-sub generate_completion_options {
-    my $shell = shift;
-    my $index = shift;
-    my @words = @_;
-
-    if($index == 3 && $words[1] eq 'register') {
-        return 'compopt -o nospace';
-    }
-    else {
-        return '';
-    }
-}
-
-sub get_shell_setter_code {
-    my $version = shift;
-
-    if ($^O =~ /win32/i) {
-        #NYI on windows.
-        die;
-    }
-    else {
-        if (version_exists($version)) {
-            return "export $env_var=\"$version\"";
-        }
-        else {
-            return "echo \"$brew_name: version '$version' not installed.\";return 1";
-        }
-    }
-}
-
-sub get_shell_unsetter_code {
-    if ($^O =~ /win32/i) {
-        #NYI on Windows.
-        die;
-    }
-    else {
-        return "unset $env_var";
-    }
-}
-
-sub clean_path {
-    my $path = shift;
-    my $also_clean_path = shift;
-    my $old_path;
-    do {
-        $old_path = $path;
-        my $clean_dirs = "$versions_dir|$shim_dir";
-        $clean_dirs = "$versions_dir|$shim_dir|$also_clean_path" if $also_clean_path;
-        $path =~ s/($clean_dirs)[^:]*:?//g;
-        $path =~ s/:?($clean_dirs)[^:]*//g;
-        $path =~ s/:($clean_dirs)[^:]*:/:/g;
-    } until $path eq $old_path;
-    return $path;
-}
-
-sub validate_shell_hook_env {
-    if (get_brew_mode() eq 'env') {
-        my $version = shift;
-        return if !version_exists($version);
-        return if $version eq 'system';
-    
-        my $path = join(':', get_bin_paths($version));
-        if (index($ENV{PATH}, $path) == -1) {
-            say STDERR "The shell hook required to use rakudobrew in 'env' mode seems not to be installed.";
-            say STDERR "Run '$brew_name init' for installation instructions.";
-        }
-    }
-}
-
-sub validate_shell_hook_shell {
-    my $version = shift;
-    return if $version ne '--unset' && !version_exists($version);
-    
-    if ($version eq '--unset' && exists $ENV{$env_var}
-    or $version ne '--unset' && ($ENV{$env_var} // '') ne $version) {
-    say $ENV{$env_var} . ' ' . $version;
-        say STDERR "The shell hook required to use rakudobrew in 'env' mode and use the 'shell' command seems not to be installed.";
-        say STDERR "Run '$brew_name init' for installation instructions.";
     }
 }
 

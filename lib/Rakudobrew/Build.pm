@@ -1,16 +1,16 @@
 package Rakudobrew::Build;
 require Exporter;
 our @ISA = qw( Exporter );
-our @EXPORT = qw(available_rakudos build_impl make build_triple build_zef);
+our @EXPORT = qw();
 
 use strict;
 use warnings;
 use 5.010;
 use File::Spec::Functions qw(catdir updir);
 use Cwd qw(cwd);
+use Rakudobrew::Variables;
 use Rakudobrew::Tools;
 use Rakudobrew::VersionHandling;
-use Rakudobrew::Variables;
 
 sub available_rakudos {
     my @output = qx|$GIT ls-remote --tags $git_repos{rakudo}|;
@@ -109,6 +109,27 @@ sub build_triple {
     }
 
     return $name;
+}
+
+sub nuke {
+    my $version = shift;
+    match_and_run($version, sub {
+        my $matched = shift;
+        if (is_registered_version($matched)) {
+            say "Unregistering $matched";
+            unlink(catfile($versions_dir, $matched));
+        }
+        elsif ($matched eq 'system') {
+            say 'I refuse to nuke system Perl 6!';
+            exit 1;
+        }
+        else {
+            say "Nuking $matched";
+            remove_tree(catdir($versions_dir, $matched));
+        }
+    });
+    # Might have lost executables -> rehash
+    rehash();
 }
 
 sub build_zef {
