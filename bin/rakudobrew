@@ -505,6 +505,10 @@ EOT
 
 echo 'eval "\$($brew_exec init <$available_shell_hooks_text>)"' >> ~/.profile
 
+# On Fish:
+
+echo '$brew_exec init Fish | source' >> ~/.config/fish/config.fish
+
 EOT
         }
     }
