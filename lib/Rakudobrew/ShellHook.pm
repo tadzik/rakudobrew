@@ -54,17 +54,26 @@ sub print_shellmod_code {
 }
 
 sub clean_path {
-    my $sep = $^O =~ /win32/i ? ';' : ':';
     my $path = shift;
     my $also_clean_path = shift;
+
+    my $sep = $^O =~ /win32/i ? ';' : ':';
+
+    my @paths;
+    for my $version (get_versions()) {
+        push @paths, get_bin_paths($version) if $version ne 'system';
+    }
+    push @paths, $versions_dir;
+    push @paths, $shim_dir;
+    push @paths, $also_clean_path if $also_clean_path;
+    my $paths_regex = join "|", @paths;
+
     my $old_path;
     do {
         $old_path = $path;
-        my $clean_dirs = "$versions_dir|$shim_dir";
-        $clean_dirs = "$versions_dir|$shim_dir|$also_clean_path" if $also_clean_path;
-        $path =~ s/($clean_dirs)[^$sep]*$sep?//g;
-        $path =~ s/$sep?($clean_dirs)[^$sep]*//g;
-        $path =~ s/$sep($clean_dirs)[^$sep]*$sep/$sep/g;
+        $path =~ s/($paths_regex)[^$sep]*$sep?//g;
+        $path =~ s/$sep?($paths_regex)[^$sep]*//g;
+        $path =~ s/$sep($paths_regex)[^$sep]*$sep/$sep/g;
     } until $path eq $old_path;
     return $path;
 }
