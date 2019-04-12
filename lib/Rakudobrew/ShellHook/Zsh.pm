@@ -27,8 +27,8 @@ sub get_init_code {
     return <<EOT;
 export PATH=$path
 $brew_name() {
-  command $brew_name internal_hooked "\$@" &&
-  eval "`command $brew_name internal_shell_hook Zsh post_call_eval "\$@"`"
+    command $brew_name internal_hooked "\$@" &&
+    eval "`command $brew_name internal_shell_hook Zsh post_call_eval "\$@"`"
 }
 
 compctl -K _${brew_name}_completions -x 'p[2] w[1,register]' -/ -- $brew_name
