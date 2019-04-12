@@ -123,6 +123,7 @@ sub set_brew_mode {
     }
     elsif ($mode eq 'shim') {
         spurt(catfile($prefix, 'MODE'), 'shim');
+        rehash();
     }
     else {
         say STDERR "Mode must either be 'env' or 'shim'";
