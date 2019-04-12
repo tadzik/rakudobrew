@@ -159,7 +159,7 @@ EOT
     $cur_backend |= '';
     $cur_rakudo |= '';
     say "Available backends:";
-    map { say $cur_backend eq $_ ? "* $_" : "  $_" } available_backends();
+    map { say $cur_backend eq $_ ? "* $_" : "  $_" } Rakudobrew::Build::available_backends();
 
 } elsif ($arg eq 'build') {
     my $impl = shift // 'moar';
@@ -204,7 +204,7 @@ EOT
         }
 
         if ($impl && $impl eq 'all') {
-            for (available_backends()) {
+            for (Rakudobrew::Build::available_backends()) {
                 Rakudobrew::Build::build_impl($_, $ver, $configure_opts);
             }
         } else {
@@ -359,7 +359,7 @@ EOT
     }
 
 } else {
-    my $backends = join '|', available_backends(), 'all';
+    my $backends = join '|', Rakudobrew::Build::available_backends(), 'all';
     say <<"EOT";
 Usage:
 $brew_name version          # or $brew_name current
@@ -414,10 +414,6 @@ sub match_and_run {
     } else {
         say "Sorry, I have no idea what '$version' is";
     }
-}
-
-sub available_backends {
-    map {$_->{name}} sort {$a->{weight} <=> $b->{weight}} values %impls;
 }
 
 sub self_upgrade {
