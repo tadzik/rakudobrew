@@ -14,8 +14,10 @@ use Rakudobrew::VersionHandling;
 
 sub available_rakudos {
     my @output = qx|$GIT ls-remote --tags $git_repos{rakudo}|;
-    my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
-    return sort grep { /^[\dv]/ } map(m{tags/([^\^]+)\^}, @tags);
+    my @tags = grep(m{refs/tags/([^\^]+)\^\{\}}, @output);
+    @tags = map(m{tags/([^\^]+)\^}, @tags);
+    @tags = grep(/^\d/, @tags);
+    return sort(@tags), 'master';
 }
 
 sub build_impl {
