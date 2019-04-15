@@ -74,7 +74,8 @@ sub completions {
         say join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } @versions));
     }
     elsif($index == 2 && $words[1] eq 'build') {
-        say join ' ', Rakudobrew::Build::available_backends(), 'all';
+        my $candidate = @words < 3 ? '' : $words[2];
+        say join(' ', grep({ substr($_, 0, length($candidate)) eq $candidate } (Rakudobrew::Build::available_backends(), 'all')));
     }
     elsif($index == 3 && $words[1] eq 'build') {
         my @installed = get_versions();
