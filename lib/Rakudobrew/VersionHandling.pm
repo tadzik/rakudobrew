@@ -270,6 +270,7 @@ sub whence {
 
     my @matches = ();
     for my $version (get_versions()) {
+        next if $version eq 'system';
         for my $path (get_bin_paths($version, $prog)) {
             if (-f $path) {
                 if ($pathmode) {
