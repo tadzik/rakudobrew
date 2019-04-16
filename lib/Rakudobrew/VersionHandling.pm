@@ -19,7 +19,7 @@ our @EXPORT = qw(
 use strict;
 use warnings;
 use 5.010;
-use File::Spec::Functions qw(catfile catdir splitdir splitpath catpath);
+use File::Spec::Functions qw(catfile catdir splitdir splitpath catpath canonpath);
 use Cwd qw(realpath);
 use File::Which qw();
 use Rakudobrew::Variables;
@@ -199,7 +199,20 @@ sub which {
 
     my $target; {
         if ($version eq 'system') {
-            $target = File::Which::which($prog);
+            my @targets = File::Which::which($prog);
+            @targets = map({
+                my ($volume,$directories,$file) = splitpath( $_ );
+                $_ = catpath($volume, $directories);
+                $_ =~ s|\\|/|g;
+                $_ = canonpath($_);
+            } @targets);
+            
+            my $normalized_shim_dir = $shim_dir;
+            $normalized_shim_dir =~ s|\\|/|g;
+            $normalized_shim_dir = canonpath($normalized_shim_dir);
+            @targets = grep({ $_ ne $normalized_shim_dir } @targets);
+            say $_ for @targets;
+            $target = $targets[0] if @targets;
         }
         elsif ($^O =~ /win32/i) {
             # The postfix of an executable on Windows is often unclear.
