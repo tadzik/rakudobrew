@@ -330,7 +330,7 @@ sub rehash {
             spurt(catfile($shim_dir, $_.'.bat'), <<EOT);
 \@ECHO OFF
 SETLOCAL
-SET brew_cmd=perl \%~dp0$brew_name internal_win_run \%~n0
+SET brew_cmd=perl \%~dp0\\..\\bin\\$brew_name internal_win_run \%~n0
 FOR /F "delims=" \%\%i IN ('\%brew_cmd\%') DO SET command=\%\%i
 IF NOT ERRORLEVEL 0 EXIT /B \%errorlevel\%
 IF     ERRORLEVEL 1 EXIT /B \%errorlevel\%
