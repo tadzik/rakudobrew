@@ -454,21 +454,21 @@ sub init {
         say <<EOT;
 # CMD:
 # To install $brew_name permanently type the following into your terminal:
-#   SETX PATH "%PATH%;$RealBin"
+#   SETX PATH "$RealBin;$shim_dir;%PATH%"
 # To make use of $brew_name in this session only use
-#   SET PATH=%PATH%;$RealBin
+#   SET PATH=$RealBin;$shim_dir;%PATH%
 #
 # PowerShell:
 # To install $brew_name permanently type the following into your terminal
 # (only works with an administrative console window):
-#   [Environment]::SetEnvironmentVariable("PATH", "\$Env:PATH;$RealBin", "User")
+#   [Environment]::SetEnvironmentVariable("PATH", "$RealBin;$shim_dir;\$Env:PATH", "User")
 # To make use of $brew_name in this session only use
-#   \$Env:PATH = "\$Env:PATH;$RealBin"
+#   \$Env:PATH = "$RealBin;$shim_dir;\$Env:PATH"
 #
 # Using the GUI:
 # Start -> right click on "Computer" -> Properties -> (Advanced system settings)
 # -> Advanced -> Environment Variables... ->  System variables
-# -> select PATH -> Edit... -> append ";$RealBin"
+# -> select PATH -> Edit... -> prepend "$RealBin;$shim_dir;"
 EOT
     }
     else {
