@@ -44,7 +44,7 @@ unless (-d $git_reference) {
 if (@ARGV && $ARGV[0] eq 'internal_hooked') { # The hook is there, all good!
     shift; # Remove the hook so processing code below doesn't need to care about it.
 }
-elsif ($ARGV[0] =~ /^internal_/  # It's an internal_ method, all good!
+elsif (@ARGV && $ARGV[0] =~ /^internal_/  # It's an internal_ method, all good!
 || !@ARGV || $ARGV[0] eq 'init') # We don't want to annoy the user with missing
                                  # hook messages if she might not have even completed
                                  # the installation process.
