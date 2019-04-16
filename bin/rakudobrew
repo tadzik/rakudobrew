@@ -45,9 +45,10 @@ if (@ARGV && $ARGV[0] eq 'internal_hooked') { # The hook is there, all good!
     shift; # Remove the hook so processing code below doesn't need to care about it.
 }
 elsif (@ARGV && $ARGV[0] =~ /^internal_/  # It's an internal_ method, all good!
-|| !@ARGV || $ARGV[0] eq 'init') # We don't want to annoy the user with missing
-                                 # hook messages if she might not have even completed
-                                 # the installation process.
+|| !@ARGV || $ARGV[0] eq 'init' # We don't want to annoy the user with missing
+                                # hook messages if she might not have even completed
+                                # the installation process.
+|| $^O =~ /win32/i )            # Windows doesn't support shell hooks. So don't whine about it here.
 {}
 elsif (get_brew_mode() eq 'env' || @ARGV && $ARGV[0] eq 'shell' || @ARGV >= 2 && $ARGV[0] eq 'mode' && $ARGV[1] eq 'env') {
     say STDERR "The shell hook required to use rakudobrew in 'env' mode and use the 'shell' command seems not to be installed.";
