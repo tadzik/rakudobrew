@@ -18,6 +18,8 @@ unless (-d catdir($prefix, 'lib')) {
     say STDERR "You seem to have upgraded rakudobrew to a newer version not compatible with";
     say STDERR "your current directory layout. Please remove rakudobrew completely by";
     say STDERR "removing $prefix and installing again.";
+    say STDERR "You will also need to change the rakudobrew entry in your shell startup";
+    say STDERR "file (~/.profile) a bit. Run `rakudobrew init` again to see how.";
     exit 1;
 }
 
