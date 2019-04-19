@@ -14,13 +14,33 @@ use Rakudobrew::VersionHandling;
 use Rakudobrew::Build;
 
 # Detect incompatible version upgrade and notify user of the breakage.
-unless (-d catdir($prefix, 'lib')) {
-    say STDERR "You seem to have upgraded rakudobrew to a newer version not compatible with";
-    say STDERR "your current directory layout. Please remove rakudobrew completely by";
-    say STDERR "removing $prefix and installing again.";
-    say STDERR "You will also need to change the rakudobrew entry in your shell startup";
-    say STDERR "file (~/.profile) a bit. Run `rakudobrew init` again to see how.";
-    exit 1;
+{
+    my $backends = join '|', Rakudobrew::Build::available_backends();
+    opendir(my $dh, $prefix);
+    my $old_version_found = grep { /^($backends)/ } readdir($dh);
+    closedir $dh;
+
+    if ($old_version_found) {
+        say STDERR <<"EOS";
+You seem to have upgraded rakudobrew to a newer version not compatible with
+your current directory layout.
+
+To use the new version you need to completely remove rakudobrew by deleting
+$prefix and installing again. See
+
+https://github.com/tadzik/rakudobrew
+
+for installation instructions. You will also need to change the rakudobrew
+entry in your shell startup file (~/.profile) a bit. Run `rakudobrew init`
+again to see how.
+
+If you don't want to upgrade, but just continue using the old version,
+do the following:
+
+cd $prefix && git checkout v1
+EOS
+        exit 1;
+    }
 }
 
 unless (-d $shim_dir) {
