@@ -124,6 +124,19 @@ if ($arg eq 'switch') {
     rehash();
 } elsif ($arg eq 'self-upgrade') {
     self_upgrade();
+    say "You are currently using rakudobrew version 1.";
+    say "A new version was released.";
+    say "To install that new version you need to completely";
+    say "remove rakudobrew and install again.";
+    say "You will also need to change the rakudobrew";
+    say "entry in your shell startup file (~/.profile) a bit.";
+    say "See";
+    say "";
+    say "https://github.com/tadzik/rakudobrew";
+    say "";
+    say "for installation instructions.";
+    say "After installation run `rakudobrew init` again to";
+    say "see how to change the shell startup file.";
 } elsif ($arg eq 'test') {
     my $version = shift;
     if ($version && $version eq 'all') {
