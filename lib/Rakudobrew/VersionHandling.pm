@@ -32,7 +32,7 @@ sub get_versions {
         sort({ $a cmp $b }
             grep({ /^[^.]/ } readdir($dh)))
     );
-    close($dh);
+    closedir($dh);
     return @versions;
 }
 
