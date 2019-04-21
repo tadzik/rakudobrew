@@ -137,7 +137,7 @@ sub get_brew_mode {
             spurt(catfile($prefix, 'MODE'), 'shim');
         }
         else {
-            spurt(catfile($prefix, 'MODE'), 'env');
+            spurt(catfile($prefix, 'MODE'), 'shim');
         }
     }
 
