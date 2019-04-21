@@ -229,7 +229,7 @@ sub which {
                 }
             }
             @results = sort {
-                # Prefer .exe > .bat > .pl6 > .pl > nothing > anything else
+                # Prefer .exe > .bat > .p6 > .pl6 > .pl > nothing > anything else
                 my (undef, undef, $suffix_a) = my_fileparse($a);
                 my (undef, undef, $suffix_b) = my_fileparse($b);
                 return -1        if $suffix_a eq '.exe' && $suffix_b ne '.exe';
@@ -238,6 +238,9 @@ sub which {
                 return -1        if $suffix_a eq '.bat' && $suffix_b ne '.bat';
                 return  1        if $suffix_a ne '.bat' && $suffix_b eq '.bat';
                 return $a cmp $b if $suffix_a eq '.bat' && $suffix_b eq '.bat';
+                return -1        if $suffix_a eq '.p6'  && $suffix_b ne '.p6';
+                return  1        if $suffix_a ne '.p6'  && $suffix_b eq '.p6';
+                return $a cmp $b if $suffix_a eq '.p6'  && $suffix_b eq '.p6';
                 return -1        if $suffix_a eq '.pl6' && $suffix_b ne '.pl6';
                 return  1        if $suffix_a ne '.pl6' && $suffix_b eq '.pl6';
                 return $a cmp $b if $suffix_a eq '.pl6' && $suffix_b eq '.pl6';
