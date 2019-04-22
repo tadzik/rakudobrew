@@ -1,7 +1,9 @@
 CURRENT
-MODE
-versions/*
-shims/*
+parrot-*/
+jvm-*/
+moar-*/
+pre-glr-nom/
+bin/*
 git_reference/
-
-*.swp
+!bin/rakudobrew
+!bin/rakudobrew.bat
