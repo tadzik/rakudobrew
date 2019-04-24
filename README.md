@@ -1,8 +1,10 @@
 # rakudobrew
 
-Put this in `~/.rakudobrew`, and add aliases for convenience.
+Rakudobrew helps to build one or more versions of Rakudo and quickly switch between them.
+It's a perlbrew and plenv look alike and supports both flavours of commands.
 
-It's quick and dirty, and may be broken on your system. Please report any breakages.
+Rakudobrew can work by modifying $PATH in place (which is a more down to the metal) as well
+as with shims (which enables advanced features, such as local versions).
 
 ## Installation
 
@@ -30,7 +32,7 @@ rakudobrew init # Instructions for permanent installation.
 
 ## Windows notes
 
-Rakudobrew requires Perl 5 and git to be installed. You can download and install these from
+Rakudobrew requires Perl 5 and Git to be installed. You can download and install these from
 * http://strawberryperl.com/
 * https://www.git-scm.com/downloads
 
@@ -54,25 +56,62 @@ around a problem with permissions that go wrong during the build process.
 $ rakudobrew build moar
 ```
 
-to build the latest [Rakudo](https://github.com/rakudo/rakudo)
-(in this case, on the [MoarVM](https://github.com/MoarVM/MoarVM) backend),
-which should then be available as `perl6`.
+to build the latest [Rakudo](https://github.com/rakudo/rakudo) release
+(in this case, on the [MoarVM](https://github.com/MoarVM/MoarVM) backend).
 
-- You now need a module management tool, you can use [zef](https://github.com/ugexe/zef) (a Perl 6 Management Tool), do:
+- Once that's build switch to it (substitute the version rakudobrew just built):
 
 ```
-$ rakudobrew build zef
+$ rakudobrew switch moar-2019.03.1
 ```
 
-## Making new scripts available
+- To install [zef](https://github.com/ugexe/zef) (the Perl 6 module manager), do:
 
-After you have installed new modules and scripts with zef or panda, you can run
+
+```
+$ rakudobrew build-zef
+```
+
+## global vs shell vs local
+
+The `global` version is the one that is active when none of the overrides of `shell`
+and `local` are triggered.
+
+The `shell` version changes the active Rakudo version just in the current shell.
+Closing the current shell also looses the `shell` version.
+
+The `local` version is specific to a folder. When CWD is in that folder or a sub folder
+that version of Rakudo is used. Only works in `shim` mode. To unset a local version
+one must delete the `.PL6ENV_VERSION` file in the respective folder.
+
+## Modes
+
+Rakudo brew has two modes of operation: `env` and `shim`.
+
+In `env` mode rakudobrew modifies the `$PATH` variable as needed when switching between
+versions. This is neat because one then runs the executables directly. This is the default mode
+on \*nix.
+
+In `shim` mode rakudobrew generates wrapper scripts called shims for all
+executables it can find in all the different Rakudo installations. These
+shims forward to the actual executable when called. This mechanism allows for
+some advanced features, such as local versions. When installing a module that
+adds scripts one must make rakudobrew aware of these new scripts. This is done
+with
 
 ```
 $ rakudobrew rehash
 ```
+In `env` mode this is not necessary.
 
-to make the scripts available in `~/.rakudobrew/bin` and thus your PATH.
+## Registering external versions
+
+To add a Rakudo installation to rakudobrew that was created without rakudobrew
+one should do:
+
+```
+$ rakudobrew register name-of-version /path/to/rakudo/install/directory
+```
 
 ## Upgrading your Perl 6 implementation
 
@@ -115,4 +154,70 @@ $ GIT_PROTOCOL=https rakudobrew list-available
 
 ## Command-line switches
 
-Run `rakudobrew`
+### `version` or `current`
+Show the currently active Rakudo version.
+
+### `versions` or `list`
+List all installed Rakudo installations.
+
+### `global [version]` or `switch [version]`
+Show or set the globally configured Rakudo version.
+
+### `shell [--unset|version]`
+Show, set or unset the shell version.
+
+### `local [version]
+Show or set the local version.
+
+### `nuke [version]` or `unregister [version]`
+Removes an installed or registered version. Versions built by rakudobrew are
+actually deleted, registered versions are only unregistered but not deleted.
+
+### `rehash`
+Regenerate all shims. Newly installed scripts will not work unless this is
+called. This is only necessary in `shim` mode.
+
+### `list-available`
+List all Rakudo versions that can be installed.
+
+### `build [jvm|moar|moar-blead|all] [tag|branch|sha-1] [--configure-opts=]`
+Build a Rakudo version. The arguments are:
+- The backend.
+    - `moar-blead` is the moar and nqp backends at the master branch.
+    - `all` will build all backends.
+- The version to build. Call `list-available` to see a list of available
+  versions. When left empty the latest release is built.
+  It is also possible to specify a commit sha or branch to build.
+- Configure options.
+
+### `triple [rakudo-ver [nqp-ver [moar-ver]]]`
+Build a specific set of Rakudo, NQP and MoarVM commits.
+
+### `register <name> <path>`
+Register an externaly built / installed Rakudo version with Rakudobrew.
+
+### `build-zef`
+Install Zef into the current Rakudo version.
+
+### `exec <command> [command-args]`
+Explicitly call an executable. You normally shouldn't need to do this.
+
+### `rakudobrew which <command>`
+Show the full path to the executable.
+
+### `whence [--path] <command>`
+List all versions that contain the given command. when `--path` is given the
+path of the executables is given instead.
+
+### `mode [env|shim]`
+Show or set the mode of operation.
+
+### `self-upgrade`
+Upgrade Rakudobrew itself.
+
+### `init`
+Show installation instructions.
+
+### `test [version|all]`
+Run Rakudo tests in the current or given version.
+
