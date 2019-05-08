@@ -3,58 +3,54 @@
 use strict;
 use warnings;
 use 5.010;
-use Cwd qw(cwd realpath);
-use FindBin qw($RealBin);
+use FindBin qw($RealBin $RealScript);
+use lib "$RealBin/../lib";
 use File::Path qw(remove_tree);
-use File::Basename;
-use File::Spec::Functions qw(catfile catdir splitdir splitpath catpath updir);
-use Carp qw(croak);
+use File::Spec::Functions qw(catfile catdir splitpath updir);
 
-my $brew_name = 'rakudobrew';
-my $env_var = 'PL6ENV_VERSION';
-my $local_filename = '.perl6-version';
+use Rakudobrew::Variables;
+use Rakudobrew::Tools;
+use Rakudobrew::VersionHandling;
+use Rakudobrew::Build;
 
-my $prefix = catdir($RealBin, updir());
-my $git_reference = catfile($prefix, 'git_reference');
+# Detect incompatible version upgrade and notify user of the breakage.
+{
+    my $backends = join '|', Rakudobrew::Build::available_backends();
+    opendir(my $dh, $prefix);
+    my $old_version_found = grep { /^($backends)/ } readdir($dh);
+    closedir $dh;
 
-unless (-d $git_reference) {
-    mkdir $git_reference;
+    if ($old_version_found) {
+        say STDERR <<"EOS";
+You seem to have upgraded rakudobrew to a newer version not compatible with
+your current directory layout.
+
+To use the new version you need to completely remove rakudobrew by deleting
+$prefix and installing again. See
+
+https://github.com/tadzik/rakudobrew
+
+for installation instructions. You will also need to change the rakudobrew
+entry in your shell startup file (~/.profile) a bit. Run `rakudobrew init`
+again to see how.
+
+If you don't want to upgrade, but just continue using the old version,
+do the following:
+
+cd $prefix && git checkout v1
+EOS
+        exit 1;
+    }
 }
 
-my $GIT       = $ENV{GIT_BINARY} // 'git';
-my $GIT_PROTO = $ENV{GIT_PROTOCOL} // 'git';
-my $PERL5     = $^X;
-
-my %git_repos = (
-    rakudo => get_git_url($GIT_PROTO, 'github.com', 'rakudo', 'rakudo'),
-    MoarVM => get_git_url($GIT_PROTO, 'github.com', 'MoarVM', 'MoarVM'),
-    nqp    => get_git_url($GIT_PROTO, 'github.com', 'perl6',  'nqp'),
-    zef    => get_git_url($GIT_PROTO, 'github.com', 'ugexe',  'zef'),
-);
-
-my %impls = (
-    jvm => {
-        name      => "jvm",
-        weight    => 20,
-        configure => "$PERL5 Configure.pl --backends=jvm --gen-nqp --git-reference=\"$git_reference\" --make-install",
-        need_repo => ['rakudo', 'nqp'],
-    },
-    moar => {
-        name      => "moar",
-        weight    => 30,
-        configure => "$PERL5 Configure.pl --backends=moar --gen-moar --git-reference=\"$git_reference\" --make-install",
-        need_repo => ['rakudo', 'nqp', 'MoarVM'],
-    },
-    'moar-blead' => {
-        name      => "moar-blead",
-        weight    => 35,
-        configure => "$PERL5 Configure.pl --backends=moar --gen-moar=master --gen-nqp=master --git-reference=\"$git_reference\" --make-install",
-        need_repo => ['rakudo', 'nqp', 'MoarVM'],
-    },
-);
-
-sub run {
-    system(@_) and croak "Failed running ".$_[0]
+unless (-d $shim_dir) {
+    mkdir $shim_dir;
+}
+unless (-d $versions_dir) {
+    mkdir $versions_dir;
+}
+unless (-d $git_reference) {
+    mkdir $git_reference;
 }
 
 { # Check whether we are called as a shim and forward if yes.
@@ -67,136 +63,43 @@ sub run {
     }
 }
 
+if (@ARGV && $ARGV[0] eq 'internal_hooked') { # The hook is there, all good!
+    shift; # Remove the hook so processing code below doesn't need to care about it.
+}
+elsif (@ARGV && $ARGV[0] =~ /^internal_/  # It's an internal_ method, all good!
+|| !@ARGV || $ARGV[0] eq 'init' # We don't want to annoy the user with missing
+                                # hook messages if she might not have even completed
+                                # the installation process.
+|| $^O =~ /win32/i )            # Windows doesn't support shell hooks. So don't whine about it here.
+{}
+elsif (get_brew_mode() eq 'env' || @ARGV && $ARGV[0] eq 'shell' || @ARGV >= 2 && $ARGV[0] eq 'mode' && $ARGV[1] eq 'env') {
+    say STDERR "The shell hook required to use rakudobrew in 'env' mode and use the 'shell' command seems not to be installed.";
+    say STDERR "Run '$brew_name init' for installation instructions.";
+    exit 1;
+}
+
+
 my $arg = shift // 'help';
-if ($arg eq 'switch') {
-    my $version = shift;
-    set_global_version($version);
-} elsif ($arg eq 'nuke') {
-    my $version = shift;
-    nuke($version);
-} elsif ($arg eq 'rehash') {
-    rehash();
-} elsif ($arg eq 'list' or $arg eq 'versions') {
-    my $cur = get_version() // '';
-    map { say $cur eq $_ ? "* $_" : "  $_" } sort { $a cmp $b } list();
-} elsif ($arg eq 'list-available') {
-    my ($cur_backend, $cur_rakudo) = split '-', (get_version() // ''), 2;
-    $cur_backend //= '';
-    $cur_rakudo  //= '';
-    say "Available Rakudo versions:";
-    map { say $cur_rakudo eq $_ ? "→ $_" : "  $_" } available_rakudos();
-    say "";
-    $cur_backend |= '';
-    $cur_rakudo |= '';
-    say "Available backends:";
-    map { say $cur_backend eq $_ ? "→ $_" : "  $_" } available_backends();
-} elsif ($arg eq 'current') {
+
+if ($arg eq 'version' || $arg eq 'current') {
     if (my $c = get_version()) {
         say "Currently running $c"
     } else {
-        say "Not running anything at the moment. Use '$brew_name switch' to set a version";
-    }
-} elsif ($arg eq 'build') {
-    my $impl = shift;
-    my $ver = shift
-        if @ARGV && $ARGV[0] !~ /^--/;
-    my $configure_opts = '';
-    if (@ARGV && $ARGV[0] =~ /^--configure-opts=/) {
-        $configure_opts = shift;
-        $configure_opts =~ s/^\-\-configure-opts=//;
-        $configure_opts =~ s/^'//;
-        $configure_opts =~ s/'$//;
-    }
-    if ($impl && $impl eq 'all') {
-        for (available_backends()) {
-            build_impl($_, $ver, $configure_opts);
-        }
-    } else {
-        build_impl($impl, $ver, $configure_opts);
-    }
-} elsif ($arg eq 'triple') {
-    my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
-    build_triple($rakudo_ver, $nqp_ver, $moar_ver);
-} elsif ($arg eq 'build-panda') {
-    say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
-} elsif ($arg eq 'build-zef') {
-    build_zef();
-    rehash();
-} elsif ($arg eq 'self-upgrade') {
-    self_upgrade();
-} elsif ($arg eq 'test') {
-    my $version = shift;
-    if ($version && $version eq 'all') {
-        for (list()) {
-            test($_);
-        }
-    } else {
-        test($version);
-    }
-# plenv interface
-} elsif ($arg eq 'exec') {
-    my $prog_name = shift;
-    do_exec($prog_name, \@ARGV);
-} elsif ($arg eq 'version') {
-    if (my $version = get_version()) {
-        say $version;
-    }
-    else {
-        say STDERR "$brew_name: No version set.";
+        say STDERR "Not running anything at the moment. Use '$brew_name switch' to set a version";
         exit 1;
     }
-} elsif ($arg eq 'init') {
-    init(@ARGV);
-} elsif ($arg eq 'sh') {
-    if (!@ARGV) {
-        my $shell_version = get_shell_version();
-        if (defined $shell_version) {
-            print "echo \"$shell_version\"";
-        }
-        else {
-            print "echo \"$brew_name: no shell-specific version configured\"";
-        }
-    }
-    else {
-        my $command = shift;
-        if ($command eq '--unset') {
-            print get_shell_unsetter_code();
-        }
-        else {
-            print get_shell_setter_code($command);
-        }
-    }
-} elsif ($arg eq 'shell') {
-    if ($^O =~ /win32/i) {
-        say <<EOT;
-To (un)set a version locally in this running shell session use the following commands:
-CMD:
-SET PL6_VERSION=YOUR_VERSION
-SET PL6_VERSION=                # Unset. No trailing whitespace!
 
-PowerShell:
-\$Env:PL6_VERSION="YOUR_VERSION"
-Remove-Item Env:\\PL6_VERSION    # Unset.
-EOT
-    }
-    else {
-        say "The shell hook required to use the 'shell' subcommands is not installed.";
-        say "Run '$brew_name init' for installation instructions.";
-    }
-} elsif ($arg eq 'local') {
-    if (!@ARGV) {
-        my $version = get_local_version();
-        if ($version) {
-            say $version;
-        }
-        else {
-            say "$brew_name: no local version configured for this directory";
-        }
-    }
-    else {
-        set_local_version($ARGV[0]);
-    }
-} elsif ($arg eq 'global') {
+} elsif ($arg eq 'versions' || $arg eq 'list') {
+    my $cur = get_version() // '';
+    map {
+        my $version_line = '';
+        $version_line .= $_ eq $cur ? '* ' : '  ';
+        $version_line .= $_;
+        $version_line .= ' -> ' . get_version_path($_) if is_registered_version($_);
+        say $version_line;
+    } get_versions();
+
+} elsif ($arg eq 'global' || $arg eq 'switch') {
     if (!@ARGV) {
         my $version = get_global_version();
         if ($version) {
@@ -207,25 +110,246 @@ EOT
         }
     }
     else {
-        set_global_version($ARGV[0]);
+        match_and_run($ARGV[0], sub {
+            set_global_version(shift);
+        });
     }
+
+} elsif ($arg eq 'shell') {
+    if ($^O =~ /win32/i) {
+        say <<EOT;
+To (un)set a version locally in this running shell session use the following commands:
+CMD:
+SET $env_var=YOUR_VERSION
+SET $env_var=                # Unset. No trailing whitespace!
+
+PowerShell:
+\$Env:$env_var="YOUR_VERSION"
+Remove-Item Env:\\$env_var    # Unset.
+EOT
+    }
+    else {
+        if (!@ARGV) {
+            my $shell_version = get_shell_version();
+            if (defined $shell_version) {
+                say "$shell_version";
+            }
+            else {
+                say "$brew_name: no shell-specific version configured";
+            }
+        }
+        else {
+            my $version = shift;
+            if ($version ne '--unset' && !version_exists($version)) {
+                say STDERR "$brew_name: version '$version' not installed.";
+                exit 1;
+            }
+        }
+    }
+
+} elsif ($arg eq 'local') {
+    validate_brew_mode();
+    if (!@ARGV) {
+        my $version = get_local_version();
+        if ($version) {
+            say $version;
+        }
+        else {
+            say "$brew_name: no local version configured for this directory";
+        }
+    }
+    else {
+        match_and_run($ARGV[0], sub {
+            set_local_version(shift);
+        });
+    }
+
+} elsif ($arg eq 'nuke' || $arg eq 'unregister') {
+    my $version = shift;
+    Rakudobrew::Build::nuke($version);
+
+} elsif ($arg eq 'rehash') {
+    validate_brew_mode();
+    rehash();
+
+} elsif ($arg eq 'list-available') {
+    my ($cur_backend, $cur_rakudo) = split '-', (get_version() // ''), 2;
+    $cur_backend //= '';
+    $cur_rakudo  //= '';
+    say "Available Rakudo versions:";
+    map { say $cur_rakudo eq $_ ? "* $_" : "  $_" } Rakudobrew::Build::available_rakudos();
+    say "";
+    $cur_backend |= '';
+    $cur_rakudo |= '';
+    say "Available backends:";
+    map { say $cur_backend eq $_ ? "* $_" : "  $_" } Rakudobrew::Build::available_backends();
+
+} elsif ($arg eq 'build') {
+    my $impl = shift // 'moar';
+    my $ver = shift
+        if @ARGV && $ARGV[0] !~ /^--/;
+
+    if (!defined $ver) {
+        my @versions = Rakudobrew::Build::available_rakudos();
+        @versions = grep { /^\d\d\d\d\.\d\d/ } @versions;
+        $ver = $versions[-1];
+    }
+
+    if ($impl eq "panda") {
+        say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
+    } elsif ($impl eq "zef") {
+        my $version = get_version();
+        if (!$version) {
+            say STDERR "$brew_name: No version set.";
+            exit 1;
+        }
+        Rakudobrew::Build::build_zef($version);
+        # Might have new executables now -> rehash.
+        rehash();
+        say "Done, built zef for $version";
+    } elsif (!exists $impls{$impl}) {
+        my $warning = "Cannot build Rakudo with backend '$impl': this backend ";
+        if ($impl eq "parrot") {
+            $warning .= "is no longer supported.";
+        } else {
+            $warning .= "does not exist.";
+        }
+        say $warning;
+        return;
+    }
+    else {
+        my $configure_opts = '';
+        if (@ARGV && $ARGV[0] =~ /^--configure-opts=/) {
+            $configure_opts = shift;
+            $configure_opts =~ s/^\-\-configure-opts=//;
+            $configure_opts =~ s/^'//;
+            $configure_opts =~ s/'$//;
+        }
+
+        if ($impl && $impl eq 'all') {
+            for (Rakudobrew::Build::available_backends()) {
+                Rakudobrew::Build::build_impl($_, $ver, $configure_opts);
+            }
+        } else {
+            Rakudobrew::Build::build_impl($impl, $ver, $configure_opts);
+        }
+
+        # Might have new executables now -> rehash.
+        rehash();
+        unless (get_version()) {
+            set_global_version("$impl-$ver");
+        }
+        say "Done, $impl-$ver built";
+    }
+
+} elsif ($arg eq 'triple') {
+    my ($rakudo_ver, $nqp_ver, $moar_ver) = (shift, shift, shift);
+    my $name = Rakudobrew::Build::build_triple($rakudo_ver, $nqp_ver, $moar_ver);
+
+    # Might have new executables now -> rehash
+    rehash();
+    unless (get_version()) {
+        set_global_version($name);
+    }
+    say "Done, $name built";
+
+} elsif ($arg eq 'register') {
+    my ($name, $path) = (shift, shift);
+    if (!$name || !$path) {
+        say STDERR "$brew_name: Need a version name and rakudo installation path";
+        exit 1;
+    }
+    if (version_exists($name)) {
+        say STDERR "$brew_name: Version $name already exists";
+        exit 1;
+    }
+
+    sub invalid() {
+        say STDERR "$brew_name: No valid rakudo installation found at '$path'";
+        exit 1;
+    }
+    invalid() if !-d $path;
+    $path = catdir($path, 'install') if !-f catfile($path, 'bin', 'perl6');
+    invalid() if !-f catdir($path, 'bin', 'perl6');
+
+    spurt(catfile($versions_dir, $name), $path);
+
+} elsif ($arg eq 'build-zef') {
+    my $version = get_version();
+    if (!$version) {
+        say STDERR "$brew_name: No version set.";
+        exit 1;
+    }
+    Rakudobrew::Build::build_zef($version);
+    # Might have new executables now -> rehash
+    rehash();
+    say "Done, built zef for $version";
+
+} elsif ($arg eq 'build-panda') {
+    say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
+
+} elsif ($arg eq 'exec') {
+    my $prog_name = shift;
+    do_exec($prog_name, \@ARGV);
+
 } elsif ($arg eq 'which') {
     if (!@ARGV) {
         say STDERR "Usage: $brew_name which <command>";
     }
     else {
-        map {say $_} which(@ARGV);
+        my $version = get_version();
+        if (!$version) {
+            say STDERR "$brew_name: No version set.";
+            exit 1;
+        }
+        map {say $_} which($ARGV[0], $version);
     }
+
 } elsif ($arg eq 'whence') {
     if (!@ARGV) {
         say STDERR "Usage: $brew_name whence [--path] <command>";
     }
     else {
-        map {say $_} whence(@ARGV);
+        my $param = shift;
+        my $pathmode = $param eq '--path';
+        my $prog = $pathmode ? shift : $param;
+        map {say $_} whence($prog, $pathmode);
     }
-} elsif ($arg eq 'win-run') {
+
+} elsif ($arg eq 'mode') {
+    if (!@ARGV) {
+        say get_brew_mode();
+    }
+    else {
+        set_brew_mode($ARGV[0]);
+    }
+
+} elsif ($arg eq 'self-upgrade') {
+    self_upgrade();
+
+} elsif ($arg eq 'init') {
+    init(@ARGV);
+
+} elsif ($arg eq 'test') {
+    my $version = shift;
+    if ($version && $version eq 'all') {
+        for (get_versions()) {
+            test($_);
+        }
+    } else {
+        test($version);
+    }
+} elsif ($arg eq 'internal_shell_hook') {
+    no strict 'refs';
+    my $shell = shift;
+    my $sub = shift;
+
+    eval "require Rakudobrew::ShellHook::$shell";
+    "Rakudobrew::ShellHook::${shell}::$sub"->(@ARGV);
+
+} elsif ($arg eq 'internal_win_run') {
     my $prog_name = shift;
-    my $path = which($prog_name);
+    my $path = which($prog_name, get_version());
     # Do some filetype detection:
     # - .exe/.bat/.cmd              -> return "filename"
     # - .nqp                        -> return "nqp filename"
@@ -240,14 +364,14 @@ EOT
         say $path;
     }
     elsif($suffix =~ /^\Q\.nqp\E\z/i) {
-        say which('nqp').' '.$path;
+        say which('nqp', get_version()).' '.$path;
     }
     else {
         open(my $fh, '<', $path);
         my $first_line = <$fh>;
         close($fh);
         if($first_line =~ /#!.*perl6/) {
-            say which('perl6').' '.$path;
+            say which('perl6', get_version()).' '.$path;
         }
         elsif($first_line =~ /#!.*perl/) {
             say 'perl '.$path;
@@ -256,64 +380,48 @@ EOT
             say $path;
         }
     }
+
 } else {
-    say "Usage:";
-    say "$brew_name current";
-    say "$brew_name list-available";
-    say "$brew_name build " , (join "|", available_backends(), "all"), " [tag|branch|sha-1]", " [--configure-opts=]";
-    say "$brew_name build zef";
-    say "$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]";
-    say "$brew_name rehash";
-    say "$brew_name switch ", (join "|", available_backends());
-    say "$brew_name nuke ", (join "|", available_backends());
-    say "$brew_name self-upgrade";
-    say "$brew_name test [", (join "|", available_backends(), "all"), "]";
-    say "$brew_name exec <command> [command-args]";
-    say "$brew_name init";
-    say "$brew_name shell [--unset|version]";
-    say "$brew_name local [version]";
-    say "$brew_name global [version]";
-    say "$brew_name version";
-    say "$brew_name versions # or $brew_name list";
-    say "$brew_name which <command>";
-    say "$brew_name whence [--path] <command>";
+    my $backends = join '|', Rakudobrew::Build::available_backends(), 'all';
+    say <<"EOT";
+Usage:
+$brew_name version          # or $brew_name current
+$brew_name versions         # or $brew_name list
+$brew_name global [version] # or $brew_name switch [version]
+$brew_name shell [--unset|version]
+$brew_name local [version]
+$brew_name nuke [version]   # or $brew_name unregister [version]
+$brew_name rehash
+
+$brew_name list-available
+$brew_name build [$backends] [tag|branch|sha-1] [--configure-opts=]
+$brew_name triple [rakudo-ver [nqp-ver [moar-ver]]]
+$brew_name register <name> <path>
+$brew_name build-zef
+
+$brew_name exec <command> [command-args]
+$brew_name which <command>
+$brew_name whence [--path] <command>
+$brew_name mode [env|shim]
+$brew_name self-upgrade
+$brew_name init
+
+$brew_name test [version|all]
+EOT
 }
 
 exit;
 
-sub available_rakudos {
-    my @output = qx|$GIT ls-remote --tags $git_repos{rakudo}|;
-    my @tags = grep( m{refs/tags/([^\^]+)\^\{\}}, @output );
-    return reverse sort grep { /^[\dv]/ } map(m{tags/([^\^]+)\^}, @tags);
-}
-
-sub list {
-    opendir(my $dh, $prefix);
-    grep {/^[^.]/ && -d catdir($prefix, $_)
-          && $_ ne 'bin' && $_ ne 'git_reference' && $_ ne 'zef' } readdir($dh);
-}
-
-sub nuke {
-    my $version = shift;
-    match_and_run($version, sub {
-        my $matched = shift;
-        say "Nuking $matched";
-        remove_tree(catdir($prefix, $matched));
-    });
-    # Might have lost executables -> rehash.
-    rehash();
-}
-
 sub match_and_run {
     my ($version, $action) = @_;
     if (!$version) {
-        say "Switch to what?";
-        say "Available builds";
-        map {say} list();
+        say "Which version do you mean?";
+        say "Available builds:";
+        map {say} get_versions();
         return;
     }
-    opendir(my $dh, $prefix);
-    my @match = grep { /\Q$version/ } list();
+    opendir(my $dh, $versions_dir);
+    my @match = grep { /\Q$version/ } get_versions();
     my ($matched, $ambiguous) = @match;
     if ($ambiguous) {
         my ($exact) = grep { $_ eq $version } @match;
@@ -331,281 +439,6 @@ sub match_and_run {
     }
 }
 
-sub available_backends {
-    map {$_->{name}} sort {$a->{weight} <=> $b->{weight}} values %impls;
-}
-
-sub build_impl {
-    my ($impl, $ver, $configure_opts) = @_;
-    unless (defined $impl) {
-        say "Build what?";
-        my ($cur) = split '-', (get_version() // ''), 2;
-        $cur //= '';
-        map { say $cur eq $_ ? "* $_" : "  $_" } available_backends();
-        return;
-    }
-    if ($impl eq "panda") {
-        say "panda is discontinued; please use zef (rakudobrew build-zef) instead";
-        return;
-    } elsif ($impl eq "zef") {
-        build_zef();
-        return;
-    }
-    unless (exists $impls{$impl}) {
-        my $warning = "Cannot build Rakudo with backend '$impl': this backend ";
-        if ($impl eq "parrot") {
-            $warning .= "is no longer supported.";
-        } else {
-            $warning .= "does not exist.";
-        }
-        say $warning;
-        return;
-    }
-    $ver //= 'master';
-    chdir $prefix;
-    unless (-d "$impl-$ver") {
-        for(@{$impls{$impl}{need_repo}}) {
-            update_git_reference($_);
-        }
-        run "$GIT clone --reference \"$git_reference/rakudo\" $git_repos{rakudo} $impl-$ver";
-    }
-    chdir "$impl-$ver";
-    run "$GIT fetch";
-    # of people say 'build somebranch', they usually mean 'build origin/somebranch'
-    my $ver_to_checkout = $ver;
-    eval {
-        run "$GIT rev-parse -q --verify origin/$ver";
-        $ver_to_checkout = "origin/$ver";
-    };
-    run "$GIT checkout $ver_to_checkout";
-
-    run $impls{$impl}{configure} . " $configure_opts";
-
-    # Might have new executables now -> rehash.
-    rehash();
-    unless (get_version()) {
-        set_global_version("$impl-$ver");
-    }
-    say "Done, $impl-$ver built";
-}
-
-sub update_git_reference {
-    my $repo = shift;
-    my $back = cwd();
-    print "Update git reference: $repo\n";
-    chdir $git_reference;
-    unless (-d $repo) {
-        run "$GIT clone $git_repos{$repo} $repo";
-    }
-    chdir $repo;
-    run "$GIT pull";
-    chdir $back;
-}
-
-sub make {
-    my $command = shift;
-    if(!-f 'Makefile') {
-        say STDERR "No Makefile found. Aborting.";
-        exit 1;
-    }
-    my $makefile = slurp('Makefile');
-    if($makefile =~ /^MAKE\s*=\s*(\w+)\s*$/m) {
-        my $make = $1;
-        run("$make $command");
-    }
-    else {
-        say STDERR "Couldn't determine correct make program. Aborting.";
-        exit 1;
-    }
-}
-
-sub build_triple {
-    my ($rakudo_ver, $nqp_ver, $moar_ver) = @_;
-    my $impl = "moar";
-    $rakudo_ver //= 'HEAD';
-    $nqp_ver //= 'HEAD';
-    $moar_ver //= 'HEAD';
-    chdir $prefix;
-    my $name = "$impl-$rakudo_ver-$nqp_ver-$moar_ver";
-    unless (-d $name) {
-        update_git_reference('rakudo');
-        run "$GIT clone --reference \"$git_reference/rakudo\" $git_repos{rakudo} $name";
-    }
-    chdir $name;
-    run "$GIT pull";
-    run "$GIT checkout $rakudo_ver";
-    if (-e 'Makefile') {
-        make('realclean');
-    }
-
-    unless (-d "nqp") {
-        update_git_reference('nqp');
-        run "$GIT clone --reference \"$git_reference/nqp\" $git_repos{nqp}";
-    }
-    chdir "nqp";
-    run "$GIT pull";
-    run "$GIT checkout $nqp_ver";
-
-    unless (-d "MoarVM") {
-        update_git_reference('MoarVM');
-        run "$GIT clone --reference \"$git_reference/MoarVM\" $git_repos{MoarVM}";
-    }
-    chdir "MoarVM";
-    run "$GIT pull";
-    run "$GIT checkout $moar_ver";
-    run "$PERL5 Configure.pl --prefix=" . catdir(updir(), updir(), 'install');
-    make('install');
-
-    chdir updir();
-    run "$PERL5 Configure.pl --backend=moar --prefix=" . catdir(updir(), 'install');
-    make('install');
-
-    chdir updir();
-    run "$PERL5 Configure.pl --backend=moar";
-    make('install');
-
-    if (-d 'zef') {
-        say "Updating zef as well";
-        build_zef(undef, $name);
-    }
-
-    # Might have new executables now -> rehash.
-    rehash();
-    unless (get_version()) {
-        set_global_version($name);
-    }
-    say "Done, $name built";
-}
-
-sub build_zef {
-    my ($version) = @_;
-    $version //= get_version();
-    if (!$version) {
-        say STDERR "$brew_name: No version set.";
-        exit 1;
-    }
-    chdir catdir($prefix, $version);
-    unless (-d 'zef') {
-        run "$GIT clone $git_repos{zef}";
-    }
-    chdir 'zef';
-    run "$GIT pull -q";
-    run "$GIT checkout";
-    run which('perl6', $version) . " -Ilib bin/zef test .";
-    run which('perl6', $version) . " -Ilib bin/zef --/test --force install .";
-    # Might have new executables now -> rehash.
-    rehash();
-    say "Done, built zef for $version";
-}
-
-sub slurp {
-    my $file = shift;
-    open(my $fh, '<', $file);
-    local $/ = '';
-    my $ret = <$fh>;
-    close($fh);
-    return $ret;
-}
-
-sub spurt {
-    my ($file, $cont) = @_;
-    open(my $fh, '>', $file);
-    say $fh $cont;
-    close($fh);
-}
-
-sub trim {
-    my $text = shift;
-    $text =~ s/^\s+|\s+$//g;
-    return $text;
-}
-
-sub check_prog_name_match {
-    my ($prog, $filename) = @_;
-    my ($basename, undef, undef) = my_fileparse($filename);
-    return $prog =~ /^\Q$basename\E\z/i;
-}
-
-sub uniq {
-    my %seen;
-    return grep { !$seen{$_}++ } @_;
-}
-
-sub slurp_dir {
-    my $name = shift;
-    opendir(my $dh, $name) or return;
-    my @ret;
-    while (my $entry = readdir $dh) {
-        next if $entry =~ /^\./;
-        next if !-f catfile($name, $entry);
-        push @ret, $entry
-    }
-    closedir $dh;
-    return @ret;
-}
-
-sub my_fileparse {
-    return fileparse(shift, ('.dll.lib', qr/\.[^.]+/));
-}
-
-sub rehash {
-    my @paths = ();
-    for my $version (list()) {
-        push @paths, get_bin_paths($version);
-    }
-
-    say "Updating shims";
-
-    { # Remove the existing shims.
-        opendir(my $dh, catdir($prefix, 'bin'));
-        while (my $entry = readdir $dh) {
-            next if $entry =~ /^\./;
-            next if $entry =~ /$brew_name/;
-            next if $entry =~ /$brew_name\.bat/;
-            next unless open my $check_fh, '<', catfile($prefix, 'bin', $entry);
-            my $is_shim;
-            LINE: while (my $line = <$check_fh>) {
-                if ($line =~ # detect self by sensible and fallback approaches
-                    /I AM RAKUDOBREW|my \$brew_name = 'rakudobrew';/
-                ) {
-                    $is_shim = 1;
-                    last LINE;
-                }
-            }
-            next unless $is_shim;
-            unlink catfile($prefix, 'bin', $entry);
-        }
-        closedir $dh;
-    }
-
-    my @bins = map { slurp_dir($_) } @paths;
-
-    if ($^O =~ /win32/i) {
-        # This wrapper is needed because:
-        # - We want rakudobrew to work even when the .pl ending is not associated with the perl program and we do not want to put `perl` before every call to a shim.
-        # - exec() in perl on Windows behaves differently from running the target program directly (output ends up on the console differently).
-        # It retrieves the target executable (only consuming STDOUT of rakudobrew) and calls it with the given arguments. STDERR still ends up on the console. The return value is checked and if an error occurs that error values is returned.
-        @bins = map { my ($basename, undef, undef) = my_fileparse($_); $basename } @bins;
-        @bins = uniq(@bins);
-        for (@bins) {
-            spurt(catfile($prefix, 'bin', $_.'.bat'), <<EOT);
-\@ECHO OFF
-SETLOCAL
-SET brew_cmd=perl \%~dp0$brew_name win-run \%~n0
-FOR /F "delims=" \%\%i IN ('\%brew_cmd\%') DO SET command=\%\%i
-IF NOT ERRORLEVEL 0 EXIT /B \%errorlevel\%
-IF     ERRORLEVEL 1 EXIT /B \%errorlevel\%
-\%command\% \%*
-EOT
-        }
-    }
-    else {
-        for (@bins) {
-            link $0, catfile($prefix, 'bin', $_);
-        }
-    }
-}
-
 sub self_upgrade {
     chdir $prefix;
     run "$GIT pull";
@@ -617,7 +450,7 @@ sub test {
         say STDERR "$brew_name: No version set.";
         exit 1;
     }
-    my @match = grep { /\Q$version/ } list();
+    my @match = grep { /\Q$version/ } get_versions();
     my ($matched, $ambiguous) = @match;
     if ($ambiguous) {
         my ($exact) = grep { $_ eq $version } @match;
@@ -627,8 +460,8 @@ sub test {
     }
     if ($matched and not $ambiguous) {
         say "Spectesting $matched";
-        chdir catdir($prefix, $matched);
-        make('spectest');
+        chdir catdir($versions_dir, $matched);
+        Rakudobrew::Build::make('spectest');
     } elsif (@match) {
         say "Sorry, I'm not sure if you mean:";
         say $_ for @match;
@@ -638,305 +471,79 @@ sub test {
     }
 }
 
-sub not_found {
-    my $version = shift;
-    return "$brew_name: version '$version' not installed.";
-}
-
-sub check_version {
-    my $version = shift;
-    return undef if !defined $version;
-    my %versionsMap = map { $_ => 1 } list();
-    return exists($versionsMap{$version});
-}
-
-sub get_bin_paths {
-    my $version = shift;
-    my $program = scalar(shift) || undef;
-    return (
-        catfile($prefix, $version, 'install', 'bin', $program // ()),
-        catfile($prefix, $version, 'install', 'share', 'perl6', 'site', 'bin', $program // ()),
-    );
-}
-
 sub init {
     my $brew_exec = catfile($RealBin, $brew_name);
     if ($^O =~ /win32/i) {
         say <<EOT;
 # CMD:
 # To install $brew_name permanently type the following into your terminal:
-#   SETX PATH "%PATH%;$RealBin"
+#   SETX PATH "$RealBin;$shim_dir;%PATH%"
 # To make use of $brew_name in this session only use
-#   SET PATH=%PATH%;$RealBin
+#   SET PATH=$RealBin;$shim_dir;%PATH%
 #
 # PowerShell:
 # To install $brew_name permanently type the following into your terminal
 # (only works with an administrative console window):
-#   [Environment]::SetEnvironmentVariable("PATH", "\$Env:PATH;$RealBin", "User")
+#   [Environment]::SetEnvironmentVariable("PATH", "$RealBin;$shim_dir;\$Env:PATH", "User")
 # To make use of $brew_name in this session only use
-#   \$Env:PATH = "\$Env:PATH;$RealBin"
+#   \$Env:PATH = "$RealBin;$shim_dir;\$Env:PATH"
 #
 # Using the GUI:
 # Start -> right click on "Computer" -> Properties -> (Advanced system settings)
 # -> Advanced -> Environment Variables... ->  System variables
-# -> select PATH -> Edit... -> append ";$RealBin"
+# -> select PATH -> Edit... -> prepend "$RealBin;$shim_dir;"
 EOT
     }
     else {
-        if (@_ and $_[0] eq '-') {
-            say <<EOT;
-export PATH="$RealBin:\${PATH}"
-$brew_name() {
-  local command
-  command="\$1"
-  if [ "\$#" -gt 0 ]; then
-    shift
-  fi
-
-  case "\$command" in
-  shell)
-    eval "`$brew_name "sh" "\$@"`";;
-  *)
-    command $brew_name "\$command" "\$@";;
-  esac
-}
-EOT
+        if (@_) {
+            no strict 'refs';
+            my $shell = $_[0];
+            
+            eval "require Rakudobrew::ShellHook::$shell";
+            
+            if ($@) {
+                say STDERR "Couldn't find shell hook implementation for shell '$shell'.";
+                exit 1;
+            }
+            my $code = "Rakudobrew::ShellHook::${shell}::get_init_code";
+            say $code->();
         }
         else {
-        say <<EOT;
+            my @available_shell_hooks;
+            opendir(my $dh, catdir($prefix, 'lib', 'Rakudobrew', 'ShellHook')) or die "$brew_name: lib dir not found";
+            while (my $entry = readdir $dh) {
+                if ($entry =~ /(.*)\.pm$/) {
+                    push @available_shell_hooks, $1;
+                }
+            }
+            closedir $dh;
+            my $available_shell_hooks_text = join('|', @available_shell_hooks);
+
+            say <<EOT;
 # Load $brew_name automatically by adding
-#   eval "\$($brew_exec init -)"
+#   eval "\$($brew_exec init <$available_shell_hooks_text>)"
 # to your local profile file.
-# (often ~/.bash_profile or ~/.profile)
+# (often ~/.bash_profile, ~/.zsh_profile or ~/.profile)
 # This can be easily done using:
 
-echo 'eval "\$($brew_exec init -)"' >> ~/.profile
+echo 'eval "\$($brew_exec init <$available_shell_hooks_text>)"' >> ~/.profile
+
+# On Fish:
+
+echo '$brew_exec init Fish | source' >> ~/.config/fish/config.fish
 
 EOT
         }
     }
-}
-
-sub get_shell_setter_code {
-    my $version = shift;
-
-    if ($^O =~ /win32/i) {
-        #NYI on windows.
-        die;
-    }
-    else {
-        if (check_version($version)) {
-            return "export $env_var=\"$version\"";
-        }
-        else {
-            return 'echo "'.not_found($version).'";return 1';
-        }
-    }
-}
-
-sub get_shell_unsetter_code {
-    if ($^O =~ /win32/i) {
-        #NYI on Windows.
-        die;
-    }
-    else {
-        return "unset $env_var";
-    }
-}
-
-sub get_shell_version {
-    # Check for shell version by looking for $PL6ENV_VERSION the environment.
-    if (defined $ENV{$env_var}) {
-        my $version = $ENV{$env_var};
-        if (check_version($version)) {
-            return $version;
-        }
-        else {
-            say STDERR "Version '$version' is set via the PL6ENV_VERSION environment variable.";
-            say STDERR "This version is not installed. Ignoring.";
-            say STDERR '';
-            return undef;
-        }
-    }
-    else {
-        return undef;
-    }
-}
-
-sub get_local_version {
-    my ($vol, $path, undef) = splitpath(realpath(), 1);
-    my @fragments = splitdir($path);
-    while (@fragments) {
-        my $filepath = catpath($vol, catdir(@fragments), $local_filename);
-        if (-f $filepath) {
-            my $version = trim(slurp($filepath));
-            if(check_version($version)) {
-                return $version;
-            }
-            else {
-                say STDERR "Version '$version' is given in the";
-                say STDERR "$filepath";
-                say STDERR "file. This version is not installed. Ignoring.";
-                say STDERR '';
-            }
-        }
-        pop @fragments;
-    }
-    return undef;
-}
-
-sub set_local_version {
-    my $version = shift;
-    if (check_version($version)) {
-        spurt($local_filename, $version);
-    }
-    else {
-        say STDERR not_found($version);
-    }
-}
-
-
-sub get_global_version {
-    if (-e catdir($prefix, 'CURRENT')) {
-        my $cur = slurp(catdir($prefix, 'CURRENT'));
-        chomp $cur;
-        return $cur;
-    }
-    else {
-        return undef;
-    }
-}
-
-sub set_global_version {
-    my $version = shift;
-    match_and_run($version, sub {
-        my $matched = shift;
-        say "Switching to $matched";
-        spurt(catfile($prefix, 'CURRENT'), $matched);
-    });
-}
-
-sub get_version {
-    my $version = get_shell_version();
-    return $version if defined $version;
-    
-    # Check for local version by looking for a `.perl6-version` file in the current and parent folders.
-    $version = get_local_version();
-    return $version if defined $version;
-
-    # Check for global version by looking at `$prefix/CURRENT` (`$prefix/version`)
-    return get_global_version();
-}
-
-sub whence {
-    my $param = shift;
-    my $pathmode = $param eq '--path';
-    my $prog = $pathmode ? shift : $param;
-
-    my @matches = ();
-    for my $version (list()) {
-        for my $path (get_bin_paths($version, $prog)) {
-            if (-f $path) {
-                if ($pathmode) {
-                    push @matches, $path;
-                }
-                else {
-                    push @matches, $version;
-                }
-                last;
-            }
-        }
-    }
-    return @matches;
-}
-
-sub which {
-    my $prog = shift;
-    my $version = shift // get_version();
-    if (!$version) {
-        say STDERR "$brew_name: No version set.";
-        exit 1;
-    }
-
-    my $target; {
-        if ($^O =~ /win32/i) {
-            # The postfix of an executable on Windows is often unclear.
-            # Thus we look for files with a basename matching the given
-            # name.
-            my @results = ();
-            my @dirs = get_bin_paths($version);
-            for my $dir (@dirs) {
-                my @files = slurp_dir($dir);
-                for my $file (@files) {
-                    if(check_prog_name_match($prog, $file)) {
-                        push @results, catfile($dir, $file);
-                    }
-                }
-            }
-            @results = sort {
-                # Prefer .exe > .bat > .pl6 > .pl > nothing > anything else
-                my (undef, undef, $suffix_a) = my_fileparse($a);
-                my (undef, undef, $suffix_b) = my_fileparse($b);
-                return -1        if $suffix_a eq '.exe' && $suffix_b ne '.exe';
-                return  1        if $suffix_a ne '.exe' && $suffix_b eq '.exe';
-                return $a cmp $b if $suffix_a eq '.exe' && $suffix_b eq '.exe';
-                return -1        if $suffix_a eq '.bat' && $suffix_b ne '.bat';
-                return  1        if $suffix_a ne '.bat' && $suffix_b eq '.bat';
-                return $a cmp $b if $suffix_a eq '.bat' && $suffix_b eq '.bat';
-                return -1        if $suffix_a eq '.pl6' && $suffix_b ne '.pl6';
-                return  1        if $suffix_a ne '.pl6' && $suffix_b eq '.pl6';
-                return $a cmp $b if $suffix_a eq '.pl6' && $suffix_b eq '.pl6';
-                return -1        if $suffix_a eq '.pl'  && $suffix_b ne '.pl';
-                return  1        if $suffix_a ne '.pl'  && $suffix_b eq '.pl';
-                return $a cmp $b if $suffix_a eq '.pl'  && $suffix_b eq '.pl';
-                return -1        if $suffix_a eq ''     && $suffix_b ne '';
-                return  1        if $suffix_a ne ''     && $suffix_b eq '';
-                return $a cmp $b if $suffix_a eq ''     && $suffix_b eq '';
-                return $a cmp $b;
-            } @results;
-            $target = $results[0];
-        }
-        else {
-            my @paths = get_bin_paths($version, $prog);
-            for my $path (@paths) {
-                if (-e $path) {
-                    $target = $path;
-                    last;
-                }
-            }
-        }
-    }
-
-    if (!$target) {
-        say STDERR "$brew_name: $prog: command not found";
-        if(whence($prog)) {
-            say STDERR <<EOT;
-
-The '$prog' command exists in these Perl 6 versions:
-EOT
-            map {say STDERR $_} whence($prog);
-        }
-        exit 1;
-    }
-
-    return $target;
 }
 
 sub do_exec {
     my ($program, $args) = @_;
 
-    my $target = which($program);
+    my $target = which($program, get_version());
     
     # Run.
     exec { $target } ($target, @$args);
     die "Executing $target failed with: $!";
 }
 
-sub get_git_url {
-    my ($protocol, $host, $user, $project) = @_;
-    if ($protocol eq "ssh") {
-        return "git\@${host}:${user}/${project}.git";
-    } else {
-        return "${protocol}://${host}/${user}/${project}.git";
-    }
-}
