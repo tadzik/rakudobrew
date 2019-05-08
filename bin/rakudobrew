@@ -523,7 +523,7 @@ EOT
 # Load $brew_name automatically by adding
 #   eval "\$($brew_exec init <$available_shell_hooks_text>)"
 # to your local profile file.
-# (often ~/.bash_profile, ~/.zsh_profile or ~/.profile)
+# (often ~/.bashrc, ~/.zshrc, ~/.bash_profile, ~/.zsh_profile or ~/.profile)
 # This can be easily done using:
 
 echo 'eval "\$($brew_exec init <$available_shell_hooks_text>)"' >> ~/.profile
