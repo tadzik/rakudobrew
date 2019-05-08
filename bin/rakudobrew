@@ -31,7 +31,7 @@ $prefix and installing again. See
 https://github.com/tadzik/rakudobrew
 
 for installation instructions. You will also need to change the rakudobrew
-entry in your shell startup file (~/.profile) a bit. Run `rakudobrew init`
+entry in your shell startup file (~/.profile, ~/.bashrc or ~/.zshrc) a bit. Run `rakudobrew init`
 again to see how.
 
 If you don't want to upgrade, but just continue using the old version,
@@ -523,7 +523,8 @@ EOT
 # Load $brew_name automatically by adding
 #   eval "\$($brew_exec init <$available_shell_hooks_text>)"
 # to your local profile file.
-# (often ~/.bash_profile, ~/.zsh_profile or ~/.profile)
+# (often ~/.bash_profile, ~/.zsh_profile, ~/.profile
+# .bashrc or .zshrc )
 # This can be easily done using:
 
 echo 'eval "\$($brew_exec init <$available_shell_hooks_text>)"' >> ~/.profile
