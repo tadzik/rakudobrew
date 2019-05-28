@@ -113,27 +113,6 @@ sub build_triple {
     return $name;
 }
 
-sub nuke {
-    my $version = shift;
-    match_and_run($version, sub {
-        my $matched = shift;
-        if (is_registered_version($matched)) {
-            say "Unregistering $matched";
-            unlink(catfile($versions_dir, $matched));
-        }
-        elsif ($matched eq 'system') {
-            say 'I refuse to nuke system Perl 6!';
-            exit 1;
-        }
-        else {
-            say "Nuking $matched";
-            remove_tree(catdir($versions_dir, $matched));
-        }
-    });
-    # Might have lost executables -> rehash
-    rehash();
-}
-
 sub build_zef {
     my $version = shift;
     chdir catdir($versions_dir, $version);

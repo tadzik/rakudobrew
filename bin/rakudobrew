@@ -166,7 +166,7 @@ EOT
 
 } elsif ($arg eq 'nuke' || $arg eq 'unregister') {
     my $version = shift;
-    Rakudobrew::Build::nuke($version);
+    nuke($version);
 
 } elsif ($arg eq 'rehash') {
     validate_brew_mode();
@@ -469,6 +469,27 @@ sub test {
         say "Sorry, I have no idea what '$version' is";
         say "Have you run '$brew_name build $version' yet?";
     }
+}
+
+sub nuke {
+    my $version = shift;
+    match_and_run($version, sub {
+        my $matched = shift;
+        if (is_registered_version($matched)) {
+            say "Unregistering $matched";
+            unlink(catfile($versions_dir, $matched));
+        }
+        elsif ($matched eq 'system') {
+            say 'I refuse to nuke system Perl 6!';
+            exit 1;
+        }
+        else {
+            say "Nuking $matched";
+            remove_tree(catdir($versions_dir, $matched));
+        }
+    });
+    # Might have lost executables -> rehash
+    rehash();
 }
 
 sub init {
