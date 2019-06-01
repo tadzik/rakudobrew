@@ -25,7 +25,7 @@ sub get_init_code {
     }
 
     return <<EOT;
-export PATH=$path
+export PATH="$path"
 $brew_name() {
     command $brew_name internal_hooked "\$@" &&
     eval "`command $brew_name internal_shell_hook Bash post_call_eval "\$@"`"
@@ -45,7 +45,7 @@ sub post_call_eval {
 
 sub get_path_setter_code {
     my $path = shift;
-    return "export PATH=$path";
+    return "export PATH=\"$path\"";
 }
 
 sub get_shell_setter_code {

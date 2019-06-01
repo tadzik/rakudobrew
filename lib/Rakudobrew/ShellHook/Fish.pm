@@ -14,16 +14,23 @@ use Rakudobrew::Build;
 sub get_init_code {
     my $path = $ENV{PATH};
     $path = Rakudobrew::ShellHook::clean_path($path, $RealBin);
+
+    my @path_components = split /:/, $path;
+    @path_components = map { "'$_'" } @path_components;
+
+    unshift @path_components, "'$RealBin'";
+
     $path =~ s/:/ /g;
-    $path = "$RealBin $path";
     if (get_brew_mode() eq 'env') {
         if (get_global_version() && get_global_version() ne 'system') {
-            $path = join(' ', get_bin_paths(get_global_version()), $path);
+            unshift @path_components, map({ "'$_'" } get_bin_paths(get_global_version()));
         }
     }
     else { # get_brew_mode() eq 'shim'
-        $path = join(' ', $shim_dir, $path);
+        unshift @path_components, "'$shim_dir'";
     }
+
+    $path = join(' ', @path_components);
 
     return <<EOT;
 set -x PATH $path
@@ -53,8 +60,9 @@ sub post_call_eval {
 
 sub get_path_setter_code {
     my $path = shift;
-    $path =~ s/:/ /g;
-    return "set -gx PATH $path";
+    my @path_components = split /:/, $path;
+    @path_components = map { "'$_'" } @path_components;
+    return "set -gx PATH " . join(' ', @path_components);
 }
 
 sub get_shell_setter_code {
