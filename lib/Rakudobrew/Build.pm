@@ -43,16 +43,12 @@ sub build_impl {
     run $impls{$impl}{configure} . " $configure_opts";
 }
 
-sub make {
-    my $command = shift;
-    if(!-f 'Makefile') {
-        say STDERR "No Makefile found. Aborting.";
-        exit 1;
-    }
-    my $makefile = slurp('Makefile');
+sub determine_make {
+    my $makefile = shift;
+    $makefile = slurp($makefile);
+
     if($makefile =~ /^MAKE\s*=\s*(\w+)\s*$/m) {
-        my $make = $1;
-        run("$make $command");
+        return $1;
     }
     else {
         say STDERR "Couldn't determine correct make program. Aborting.";
@@ -76,7 +72,7 @@ sub build_triple {
     run "$GIT pull";
     run "$GIT checkout $rakudo_ver";
     if (-e 'Makefile') {
-        make('realclean');
+        run(determine_make('Makefile'), 'install');
     }
 
     unless (-d "nqp") {
@@ -94,16 +90,13 @@ sub build_triple {
     chdir "MoarVM";
     run "$GIT pull";
     run "$GIT checkout $moar_ver";
-    run "$PERL5 Configure.pl --prefix=" . catdir(updir(), updir(), 'install');
-    make('install');
+    run "$PERL5 Configure.pl --prefix=" . catdir(updir(), updir(), 'install') . ' --make-install';
 
     chdir updir();
-    run "$PERL5 Configure.pl --backend=moar --prefix=" . catdir(updir(), 'install');
-    make('install');
+    run "$PERL5 Configure.pl --backend=moar --prefix=" . catdir(updir(), 'install') . ' --make-install';
 
     chdir updir();
-    run "$PERL5 Configure.pl --backend=moar";
-    make('install');
+    run "$PERL5 Configure.pl --backend=moar --make-install";
 
     if (-d 'zef') {
         say "Updating zef as well";
