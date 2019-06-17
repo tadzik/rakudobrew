@@ -9,12 +9,13 @@ use 5.010;
 
 use FindBin qw($RealBin);
 use File::Spec::Functions qw(catfile catdir updir);
+use Cwd 'abs_path';
 
 our $brew_name = 'rakudobrew';
 our $env_var = 'PL6ENV_VERSION';
 our $local_filename = '.perl6-version';
 
-our $prefix = catdir($RealBin, updir());
+our $prefix = abs_path(catdir($RealBin, updir()));
 our $versions_dir = catdir($prefix, 'versions');
 our $shim_dir = catdir($prefix, 'shims');
 our $git_reference = catdir($prefix, 'git_reference');
