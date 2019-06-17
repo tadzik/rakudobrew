@@ -186,11 +186,13 @@ EOT
 
 } elsif ($arg eq 'build') {
     my $impl = shift // 'moar';
+    $impl = 'moar-bleed' if $impl eq 'moar-blead';
+
     my $ver = shift
         if @ARGV && $ARGV[0] !~ /^--/;
 
     if (!defined $ver) {
-        if ($impl eq 'moar-blead') {
+        if ($impl eq 'moar-bleed') {
             $ver = 'master';
         }
         else {

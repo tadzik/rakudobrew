@@ -180,10 +180,10 @@ called. This is only necessary in `shim` mode.
 ### `list-available`
 List all Rakudo versions that can be installed.
 
-### `build [jvm|moar|moar-blead|all] [tag|branch|sha-1] [--configure-opts=]`
+### `build [jvm|moar|moar-bleed|all] [tag|branch|sha-1] [--configure-opts=]`
 Build a Rakudo version. The arguments are:
 - The backend.
-    - `moar-blead` is the moar and nqp backends at the master branch.
+    - `moar-bleed` is the moar and nqp backends at the master branch.
     - `all` will build all backends.
 - The version to build. Call `list-available` to see a list of available
   versions. When left empty the latest release is built.
