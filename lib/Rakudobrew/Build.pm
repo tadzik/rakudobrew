@@ -23,16 +23,19 @@ sub available_rakudos {
 sub build_impl {
     my ($impl, $ver, $configure_opts) = @_;
 
+    my $name = "$impl-$ver";
+    $name = $impl if $impl eq 'moar-blead' && $ver eq 'master';
+
     chdir $versions_dir;
-    unless (-d "$impl-$ver") {
+    unless (-d $name) {
         for(@{$impls{$impl}{need_repo}}) {
             update_git_reference($_);
         }
-        run "$GIT clone --reference \"$git_reference/rakudo\" $git_repos{rakudo} $impl-$ver";
+        run "$GIT clone --reference \"$git_reference/rakudo\" $git_repos{rakudo} $name";
     }
-    chdir "$impl-$ver";
+    chdir $name;
     run "$GIT fetch";
-    # of people say 'build somebranch', they usually mean 'build origin/somebranch'
+    # when people say 'build somebranch', they usually mean 'build origin/somebranch'
     my $ver_to_checkout = $ver;
     eval {
         run "$GIT rev-parse -q --verify origin/$ver";

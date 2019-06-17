@@ -231,6 +231,9 @@ EOT
             $configure_opts =~ s/'$//;
         }
 
+        my $name = "$impl-$ver";
+        $name = $impl if $impl eq 'moar-blead' && $ver eq 'master';
+
         if ($impl && $impl eq 'all') {
             for (Rakudobrew::Build::available_backends()) {
                 Rakudobrew::Build::build_impl($_, $ver, $configure_opts);
@@ -242,9 +245,9 @@ EOT
         # Might have new executables now -> rehash.
         rehash();
         unless (get_version()) {
-            set_global_version("$impl-$ver");
+            set_global_version($name);
         }
-        say "Done, $impl-$ver built";
+        say "Done, $name built";
     }
 
 } elsif ($arg eq 'triple') {
