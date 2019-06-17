@@ -222,7 +222,7 @@ EOT
             $warning .= "does not exist.";
         }
         say $warning;
-        return;
+        exit 1;
     }
     else {
         my $configure_opts = '';
