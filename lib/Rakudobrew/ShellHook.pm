@@ -71,8 +71,9 @@ sub clean_path {
     my $old_path;
     do {
         $old_path = $path;
-        $path =~ s/($paths_regex)[^$sep]*$sep?//g;
-        $path =~ s/$sep?($paths_regex)[^$sep]*//g;
+        $path =~ s/^($paths_regex)[^$sep]*$//g;
+        $path =~ s/^($paths_regex)[^$sep]*$sep//g;
+        $path =~ s/$sep($paths_regex)[^$sep]*$//g;
         $path =~ s/$sep($paths_regex)[^$sep]*$sep/$sep/g;
     } until $path eq $old_path;
     return $path;
