@@ -190,9 +190,14 @@ EOT
         if @ARGV && $ARGV[0] !~ /^--/;
 
     if (!defined $ver) {
-        my @versions = Rakudobrew::Build::available_rakudos();
-        @versions = grep { /^\d\d\d\d\.\d\d/ } @versions;
-        $ver = $versions[-1];
+        if ($impl eq 'moar-blead') {
+            $ver = 'master';
+        }
+        else {
+            my @versions = Rakudobrew::Build::available_rakudos();
+            @versions = grep { /^\d\d\d\d\.\d\d/ } @versions;
+            $ver = $versions[-1];
+        }
     }
 
     if ($impl eq "panda") {
