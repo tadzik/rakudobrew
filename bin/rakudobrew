@@ -431,21 +431,16 @@ sub match_and_run {
         return;
     }
     opendir(my $dh, $versions_dir);
-    my @match = grep { /\Q$version/ } get_versions();
-    my ($matched, $ambiguous) = @match;
-    if ($ambiguous) {
-        my ($exact) = grep { $_ eq $version } @match;
-        if ($exact) {
-            ($matched, $ambiguous) = $exact;
-        }
+    if (grep { $_ eq $version } get_versions()) {
+        $action->($version);
     }
-    if ($matched and not $ambiguous) {
-        $action->($matched);
-    } elsif (@match) {
-        say "Sorry, I'm not sure if you mean:";
-        say $_ for @match;
-    } else {
-        say "Sorry, I have no idea what '$version' is";
+    else {
+        say "Sorry, '$version' not found.";
+        my @match = grep { /\Q$version/ } get_versions();
+        if (@match) {
+            say "Did you mean:";
+            say $_ for @match;
+        }
     }
 }
 
