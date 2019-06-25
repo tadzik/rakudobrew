@@ -53,8 +53,8 @@ our %impls = (
         configure => "$PERL5 Configure.pl --backends=moar --gen-moar --git-reference=\"$git_reference\" --make-install",
         need_repo => ['rakudo', 'nqp', 'MoarVM'],
     },
-    'moar-bleed' => {
-        name      => "moar-bleed",
+    'moar-blead' => {
+        name      => "moar-blead",
         weight    => 35,
         configure => "$PERL5 Configure.pl --backends=moar --gen-moar=master --gen-nqp=master --git-reference=\"$git_reference\" --make-install",
         need_repo => ['rakudo', 'nqp', 'MoarVM'],

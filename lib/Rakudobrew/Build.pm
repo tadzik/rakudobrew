@@ -24,7 +24,7 @@ sub build_impl {
     my ($impl, $ver, $configure_opts) = @_;
 
     my $name = "$impl-$ver";
-    $name = $impl if $impl eq 'moar-bleed' && $ver eq 'master';
+    $name = $impl if $impl eq 'moar-blead' && $ver eq 'master';
 
     chdir $versions_dir;
     unless (-d $name) {
