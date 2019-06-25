@@ -208,7 +208,6 @@ sub which {
             my $normalized_shim_dir = $shim_dir;
             $normalized_shim_dir =~ s|\\|/|g;
             $normalized_shim_dir = canonpath($normalized_shim_dir);
-            say $_ for @targets;
 
             @targets = grep({
                 my ($volume,$directories,$file) = splitpath( $_ );
