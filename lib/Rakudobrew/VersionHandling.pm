@@ -201,17 +201,22 @@ sub which {
         if ($version eq 'system') {
             my @targets = File::Which::which($prog);
             @targets = map({
-                my ($volume,$directories,$file) = splitpath( $_ );
-                $_ = catpath($volume, $directories);
                 $_ =~ s|\\|/|g;
                 $_ = canonpath($_);
             } @targets);
-            
+
             my $normalized_shim_dir = $shim_dir;
             $normalized_shim_dir =~ s|\\|/|g;
             $normalized_shim_dir = canonpath($normalized_shim_dir);
-            @targets = grep({ $_ ne $normalized_shim_dir } @targets);
             say $_ for @targets;
+
+            @targets = grep({
+                my ($volume,$directories,$file) = splitpath( $_ );
+                my $target_dir = catpath($volume, $directories);
+                $target_dir = canonpath($target_dir);
+                $target_dir ne $normalized_shim_dir;
+            } @targets);
+
             $target = $targets[0] if @targets;
         }
         elsif ($^O =~ /win32/i) {
