@@ -1,3 +1,8 @@
+# DEPRECATION NOTICE
+
+Rakudobrew has been renamed to Rakubrew. Head over to [rakubrew.org](https://rakubrew.org/)
+for the current version.
+
 # rakudobrew
 
 Rakudobrew helps to build one or more versions of Rakudo and quickly switch between them.
