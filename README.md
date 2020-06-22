@@ -171,7 +171,7 @@ Show or set the globally configured Rakudo version.
 ### `shell [--unset|version]`
 Show, set or unset the shell version.
 
-### `local [version]
+### `local [version]`
 Show or set the local version.
 
 ### `nuke [version]` or `unregister [version]`
